@@ -90,7 +90,7 @@
         function checkTurnjs() {
             return new Promise((resolve) => {
                 const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/turn.js@0.8.0/turn.min.js';
+                script.src = 'page-flip/turn.min.js';
                 script.onload = () => {
                     if (window.jQuery && jQuery.fn.turn) {
                         addResult('Turn.js', '✅', 'Loaded successfully');

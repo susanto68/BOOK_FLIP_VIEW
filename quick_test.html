@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turn.js Quick Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-container { max-width: 600px; margin: 0 auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        #flipbook { width: 400px; height: 300px; margin: 20px auto; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Turn.js Quick Test</h1>
+        <div id="status">Testing Turn.js...</div>
+        <div id="flipbook">
+            <div style="background: white; padding: 20px; text-align: center;">Page 1</div>
+            <div style="background: white; padding: 20px; text-align: center;">Page 2</div>
+            <div style="background: white; padding: 20px; text-align: center;">Page 3</div>
+        </div>
+    </div>
+
+    <script src="page-flip/jquery.min.js"></script>
+    <script src="page-flip/turn.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const status = document.getElementById('status');
+            
+            // Check if jQuery loaded
+            if (typeof $ === 'undefined') {
+                status.innerHTML = '<div class="status error">❌ jQuery failed to load</div>';
+                return;
+            }
+            
+            // Check if Turn.js loaded
+            if (typeof $.fn.turn === 'undefined') {
+                status.innerHTML = '<div class="status error">❌ Turn.js failed to load</div>';
+                return;
+            }
+            
+            // Try to initialize Turn.js
+            try {
+                $('#flipbook').turn({
+                    width: 400,
+                    height: 300,
+                    autoCenter: true,
+                    display: 'single'
+                });
+                
+                status.innerHTML = '<div class="status success">✅ Turn.js is working perfectly!</div>';
+            } catch (error) {
+                status.innerHTML = '<div class="status error">❌ Turn.js initialization failed: ' + error.message + '</div>';
+            }
+        });
+    </script>
+</body>
+</html> 

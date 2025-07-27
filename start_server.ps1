@@ -11,4 +11,16 @@ Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Red
 Write-Host ""
 
 # Start the Python HTTP server
-python -m http.server 8000 
+try {
+    # Try to start the server
+    python -m http.server 8000
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Server started successfully." -ForegroundColor Green
+    } else {
+        Write-Host "Server failed to start. Please check for errors above." -ForegroundColor Red
+        exit 1
+    }
+} catch {
+    Write-Host "An error occurred while starting the server: $_" -ForegroundColor Red
+    exit 1
+}

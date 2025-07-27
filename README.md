@@ -47,7 +47,7 @@ npx http-server
 ### 2. Open in Browser
 
 Open your browser and navigate to:
-- Main application: `http://localhost:8000/index.html`
+- Main application: `http://localhost:8000/index.html``
 - Test file: `http://localhost:8000/test.html`
 
 ### 3. Navigation
