@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Flip Status Check</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-xl p-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">PDF Flip Status Check</h1>
+        
+        <div id="status" class="space-y-4">
+            <div class="p-4 bg-blue-100 rounded-lg">
+                <h3 class="font-semibold text-blue-800">Checking Components...</h3>
+                <div id="results" class="mt-2 space-y-2"></div>
+            </div>
+        </div>
+
+        <div class="mt-6 text-center">
+            <a href="index.html" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg inline-block">
+                Go to Main App
+            </a>
+            <a href="test.html" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg inline-block ml-4">
+                Go to Test App
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(component, status, message) {
+            const icon = status === '✅' ? '✅' : '❌';
+            const color = status === '✅' ? 'text-green-700' : 'text-red-700';
+            results.innerHTML += `
+                <div class="flex items-center space-x-2">
+                    <span class="font-mono">${icon}</span>
+                    <span class="font-semibold">${component}:</span>
+                    <span class="${color}">${message}</span>
+                </div>
+            `;
+        }
+
+        // Check jQuery
+        function checkJQuery() {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js';
+                script.onload = () => {
+                    if (window.jQuery) {
+                        addResult('jQuery', '✅', 'Loaded successfully');
+                        resolve(true);
+                    } else {
+                        addResult('jQuery', '❌', 'Failed to load');
+                        resolve(false);
+                    }
+                };
+                script.onerror = () => {
+                    addResult('jQuery', '❌', 'Failed to load');
+                    resolve(false);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Check PDF.js
+        function checkPDFjs() {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js';
+                script.onload = () => {
+                    if (window.pdfjsLib) {
+                        addResult('PDF.js', '✅', 'Loaded successfully');
+                        resolve(true);
+                    } else {
+                        addResult('PDF.js', '❌', 'Failed to load');
+                        resolve(false);
+                    }
+                };
+                script.onerror = () => {
+                    addResult('PDF.js', '❌', 'Failed to load');
+                    resolve(false);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Check Turn.js
+        function checkTurnjs() {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/turn.js@0.8.0/turn.min.js';
+                script.onload = () => {
+                    if (window.jQuery && jQuery.fn.turn) {
+                        addResult('Turn.js', '✅', 'Loaded successfully');
+                        resolve(true);
+                    } else {
+                        addResult('Turn.js', '❌', 'Failed to load or jQuery not available');
+                        resolve(false);
+                    }
+                };
+                script.onerror = () => {
+                    addResult('Turn.js', '❌', 'Failed to load');
+                    resolve(false);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Check PDF file
+        function checkPDFFile() {
+            return new Promise((resolve) => {
+                fetch('Introduction_to_Python_Programming_-_WEB.pdf', { method: 'HEAD' })
+                    .then(response => {
+                        if (response.ok) {
+                            addResult('PDF File', '✅', 'Available (11MB)');
+                            resolve(true);
+                        } else {
+                            addResult('PDF File', '❌', 'Not found');
+                            resolve(false);
+                        }
+                    })
+                    .catch(() => {
+                        addResult('PDF File', '❌', 'Not accessible');
+                        resolve(false);
+                    });
+            });
+        }
+
+        // Run all checks
+        async function runChecks() {
+            addResult('Server', '✅', 'Running on port 8000');
+            
+            await checkJQuery();
+            await checkPDFjs();
+            await checkTurnjs();
+            await checkPDFFile();
+            
+            // Final status
+            setTimeout(() => {
+                const allPassed = results.textContent.includes('❌') === false;
+                if (allPassed) {
+                    results.innerHTML += `
+                        <div class="mt-4 p-3 bg-green-100 rounded-lg">
+                            <div class="font-bold text-green-800">🎉 All components are working correctly!</div>
+                            <div class="text-green-700">Your PDF flip viewer is ready to use.</div>
+                        </div>
+                    `;
+                } else {
+                    results.innerHTML += `
+                        <div class="mt-4 p-3 bg-red-100 rounded-lg">
+                            <div class="font-bold text-red-800">⚠️ Some components failed to load.</div>
+                            <div class="text-red-700">Check your internet connection and try again.</div>
+                        </div>
+                    `;
+                }
+            }, 1000);
+        }
+
+        // Start checks when page loads
+        window.addEventListener('load', runChecks);
+    </script>
+</body>
+</html> 

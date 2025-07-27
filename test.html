@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Flip Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-xl p-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">PDF Flip Test</h1>
+        
+        <div id="flipbook" class="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
+            <div class="text-center">
+                <div class="spinner mb-4"></div>
+                <p>Loading PDF...</p>
+            </div>
+        </div>
+        
+        <div class="flex justify-center space-x-4 mt-6">
+            <button id="prevPage" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Previous</button>
+            <button id="nextPage" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Next</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/turn.js@0.8.0/turn.min.js"></script>
+    <script>
+        pdfjsLib.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+        
+        const pdfUrl = 'Introduction_to_Python_Programming_-_WEB.pdf';
+        const $flipbook = $('#flipbook');
+        const $prevBtn = $('#prevPage');
+        const $nextBtn = $('#nextPage');
+        
+        let pageCanvases = [];
+        
+        async function loadPDF() {
+            try {
+                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                const numPages = Math.min(pdf.numPages, 10); // Limit to first 10 pages for testing
+                
+                $flipbook.empty();
+                
+                for (let i = 1; i <= numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 0.8 });
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+                    pageCanvases.push(canvas);
+                }
+                
+                // Initialize Turn.js
+                pageCanvases.forEach(canvas => {
+                    $flipbook.append(canvas);
+                });
+                
+                $flipbook.turn({
+                    width: 800,
+                    height: 600,
+                    autoCenter: true,
+                    display: 'double',
+                    duration: 800
+                });
+                
+                // Navigation
+                $prevBtn.click(() => $flipbook.turn('previous'));
+                $nextBtn.click(() => $flipbook.turn('next'));
+                
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                $flipbook.html('<p class="text-red-500">Error loading PDF. Check console for details.</p>');
+            }
+        }
+        
+        $(document).ready(loadPDF);
+    </script>
+</body>
+</html> 
