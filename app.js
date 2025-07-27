@@ -90,35 +90,30 @@ function initializeFlipbook() {
 
     // Calculate optimal width and height for Turn.js based on the first page's dimensions.
     // Turn.js works best with explicit dimensions.
-    // For 'double' display, the width should be twice the page width.
+    // For 'single' display, the width should be the page width.
     const pageWidth = pageCanvases[0].width;
     const pageHeight = pageCanvases[0].height;
 
-    // Determine the maximum width the flipbook can take while maintaining aspect ratio
-    // and fitting within the parent container (max-w-3xl in index.html).
-    // We'll use a responsive approach.
-    const maxFlipbookWidth = $flipbookContainer.parent().width() * 0.9; // 90% of parent width
-    const calculatedFlipbookHeight = maxFlipbookWidth / (pageWidth * 2 / pageHeight); // For double page spread
+    // Responsive: Use 90vw or parent width, but never more than the page's natural width
+    const maxFlipbookWidth = Math.min($flipbookContainer.parent().width() * 0.98, pageWidth, window.innerWidth * 0.98);
+    const calculatedFlipbookHeight = maxFlipbookWidth / (pageWidth / pageHeight);
 
     // Initialize Turn.js with the calculated dimensions and other options.
-    // 'display: "double"' shows two pages side-by-side.
-    // 'autoCenter: true' centers the flipbook.
-    // 'acceleration: true' uses CSS 3D transforms for smoother animations.
-    // 'duration': Speed of the page turn animation in milliseconds.
+    // 'display: "single"' shows one page at a time.
     $flipbookContainer.turn({
         width: maxFlipbookWidth,
         height: calculatedFlipbookHeight,
         autoCenter: true,
         acceleration: true,
-        display: 'double',
+        display: 'single', // Changed from 'double' to 'single'
         duration: 800, // 800ms for a smooth flip
-        // Add more Turn.js options here if needed, e.g., 'gradients', 'elevation'
+        // Add more Turn.js options here if needed
     });
 
     // Adjust flipbook size on window resize to maintain responsiveness
     $(window).on('resize', function() {
-        const newMaxFlipbookWidth = $flipbookContainer.parent().width() * 0.9;
-        const newCalculatedFlipbookHeight = newMaxFlipbookWidth / (pageWidth * 2 / pageHeight);
+        const newMaxFlipbookWidth = Math.min($flipbookContainer.parent().width() * 0.98, pageWidth, window.innerWidth * 0.98);
+        const newCalculatedFlipbookHeight = newMaxFlipbookWidth / (pageWidth / pageHeight);
         $flipbookContainer.turn('size', newMaxFlipbookWidth, newCalculatedFlipbookHeight);
     });
 
