@@ -81,6 +81,29 @@ async function renderPdfPages() {
     }
 }
 
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function adjustFlipbookForMobile() {
+    if (isMobile()) {
+        // Make flipbook fill the viewport
+        $('#flipbook').css({
+            width: window.innerWidth + 'px',
+            height: window.innerHeight + 'px',
+            maxWidth: '100vw',
+            maxHeight: '100vh',
+            borderRadius: 0,
+            padding: 0
+        });
+        // Show flip indicator
+        $('#flip-indicator').removeClass('hidden');
+    } else {
+        // Hide flip indicator on desktop
+        $('#flip-indicator').addClass('hidden');
+    }
+}
+
 /**
  * Initializes the Turn.js library on the flipbook container.
  * This function should be called only after all PDF pages have been rendered to canvases.
@@ -113,12 +136,9 @@ function initializeFlipbook() {
         // Add more Turn.js options here if needed
     });
 
-    // Adjust flipbook size on window resize to maintain responsiveness
-    $(window).on('resize', function() {
-        const newMaxFlipbookWidth = Math.min($flipbookContainer.parent().width() * 0.98, pageWidth, window.innerWidth * 0.98);
-        const newCalculatedFlipbookHeight = newMaxFlipbookWidth / (pageWidth / pageHeight);
-        $flipbookContainer.turn('size', newMaxFlipbookWidth, newCalculatedFlipbookHeight);
-    });
+    // After initializing Turn.js:
+    adjustFlipbookForMobile();
+    $(window).on('resize', adjustFlipbookForMobile);
 
     // Add event listeners for navigation buttons
     $prevPageButton.on('click', function() {

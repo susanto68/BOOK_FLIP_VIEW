@@ -195,3 +195,64 @@ body {
         padding: 0 !important;
     }
 }
+
+/* Flip indicator for mobile */
+.flip-indicator {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.85);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 1rem;
+    color: #333;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    animation: flip-indicator-fade 1.5s infinite alternate;
+}
+.flip-indicator .arrow {
+    font-size: 1.5rem;
+    margin-right: 8px;
+    animation: flip-arrow-bounce 1s infinite alternate;
+}
+@keyframes flip-arrow-bounce {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(8px); }
+}
+@keyframes flip-indicator-fade {
+    0% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Hide indicator on desktop */
+@media (min-width: 769px) {
+    .flip-indicator { display: none !important; }
+}
+
+/* Show indicator on mobile */
+@media (max-width: 768px) {
+    .flip-indicator { display: flex !important; }
+    .nav-btn-row { margin-top: 0.5rem !important; }
+    .nav-btn {
+        font-size: 0.9rem !important;
+        padding: 0.5rem 1rem !important;
+        min-width: 60px;
+        min-height: 36px;
+        border-radius: 8px !important;
+    }
+}
+
+/* Reading mode enhancements (already present, but reinforce) */
+body {
+    background: #f4f4f2;
+    color: #222;
+}
+#flipbook {
+    background: #fffbe9;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    border-radius: 12px;
+    padding: 8px;
+}
