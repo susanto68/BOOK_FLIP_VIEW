@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Kindle-like Reader - Optimized</title>
+    
+    <!-- Resource hints for better performance -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Critical CSS inline for faster rendering -->
+    <style>
+        /* Critical styles inline to prevent render blocking */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f4f4f2;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(255,255,255,0.95);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 1.25rem;
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .container {
+            max-width: 1024px;
+            width: 100%;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 90vh;
+            margin: 1rem;
+        }
+        
+        .title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        #flipbook {
+            flex-grow: 1;
+            width: 100%;
+            max-width: 768px;
+            position: relative;
+            background: #fffbe9;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            border-radius: 12px;
+            padding: 8px;
+            max-height: 80vh;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+        }
+        
+        #flipbook canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            width: 100%;
+        }
+        
+        .nav-btn {
+            background: #3b82f6;
+            color: white;
+            font-weight: 600;
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            transform: scale(1);
+            border: none;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .nav-btn:hover {
+            background: #2563eb;
+            transform: scale(1.05);
+        }
+        
+        .nav-btn:focus {
+            ring: 2px solid #3b82f6;
+            ring-opacity: 0.75;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .container {
+                margin: 0.5rem;
+                padding: 1rem;
+                min-height: 95vh;
+            }
+            
+            .title {
+                font-size: 1.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            #flipbook {
+                max-height: 70vh;
+                padding: 4px;
+                border-radius: 8px;
+            }
+            
+            .nav-btn {
+                font-size: 0.9rem;
+                padding: 0.5rem 1rem;
+                min-width: 60px;
+                min-height: 36px;
+                border-radius: 8px;
+            }
+        }
+        
+        .flip-indicator {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            align-items: center;
+            background: rgba(255,255,255,0.85);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 1rem;
+            color: #333;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            animation: flip-indicator-fade 1.5s infinite alternate;
+        }
+        
+        .flip-indicator .arrow {
+            font-size: 1.5rem;
+            margin-right: 8px;
+            animation: flip-arrow-bounce 1s infinite alternate;
+        }
+        
+        @keyframes flip-arrow-bounce {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(8px); }
+        }
+        
+        @keyframes flip-indicator-fade {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .flip-indicator {
+                display: flex !important;
+            }
+        }
+    </style>
+    
+    <!-- Non-critical CSS loaded asynchronously -->
+    <link rel="preload" href="dist/tailwind.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="dist/tailwind.min.css"></noscript>
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen items-center justify-center p-4">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-message">
+            <div class="spinner"></div>
+            <span>Loading PDF... Please wait.</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 class="title">My Digital Reader</h1>
+
+        <!-- Flipbook Container -->
+        <div id="flipbook">
+            <!-- Flip indicator for mobile -->
+            <div id="flip-indicator" class="flip-indicator">
+                <span class="arrow">&#8594;</span>
+                <span class="swipe-text">Swipe or tap to flip</span>
+            </div>
+            <!-- PDF pages will be rendered into canvas elements here by app-optimized.js -->
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="nav-buttons">
+            <button id="prevPage" class="nav-btn">
+                &#8592; Prev
+            </button>
+            <button id="nextPage" class="nav-btn">
+                Next &#8594;
+            </button>
+        </div>
+        
+        <!-- Page counter -->
+        <div class="text-center mt-4 text-gray-600">
+            Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+        </div>
+    </div>
+
+    <!-- Preload critical JavaScript -->
+    <link rel="preload" href="page-flip/jquery.min.js" as="script">
+    <link rel="preload" href="page-flip/turn.min.js" as="script">
+    
+    <!-- Load optimized application script -->
+    <script src="app-optimized.js" defer></script>
+    
+    <!-- Service Worker for caching (optional) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(registrationError => console.log('SW registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>
