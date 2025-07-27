@@ -13,6 +13,7 @@ const $flipbookContainer = $('#flipbook');
 const $prevPageButton = $('#prevPage');
 const $nextPageButton = $('#nextPage');
 const $loadingMessage = $('.loading-message'); // The loading message element
+const $loadingOverlay = $('#loadingOverlay');
 
 let pdfDoc = null; // Stores the loaded PDF document object
 let pageCanvases = []; // Array to store canvas elements for each PDF page
@@ -23,7 +24,8 @@ let pageCanvases = []; // Array to store canvas elements for each PDF page
  */
 async function renderPdfPages() {
     try {
-        // Show the loading message while PDF is being processed
+        // Show the loading overlay while PDF is being processed
+        $loadingOverlay.removeClass('hidden');
         $loadingMessage.show();
         $flipbookContainer.hide(); // Hide the flipbook container initially
 
@@ -65,15 +67,16 @@ async function renderPdfPages() {
         // 3. Initialize the Turn.js flipbook once all pages are rendered
         initializeFlipbook();
 
-        // Hide the loading message and show the flipbook
+        // Hide the loading overlay and message, show the flipbook
+        $loadingOverlay.addClass('hidden');
         $loadingMessage.hide();
         $flipbookContainer.show();
 
     } catch (error) {
         // Log any errors during PDF loading or rendering
         console.error('Error loading or rendering PDF:', error);
-        $loadingMessage.html('<span class="text-red-500">Error loading PDF. Please check the console for details.</span>');
-        $loadingMessage.show();
+        $loadingOverlay.find('.loading-message').html('<span class="text-red-500">Error loading PDF. Please check the console for details.</span>');
+        $loadingOverlay.removeClass('hidden');
         $flipbookContainer.hide();
     }
 }

@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>My Kindle-like Reader</title>
-    <!-- Tailwind CSS CDN for utility classes -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (production build) -->
+    <link rel="stylesheet" href="tailwind.output.css">
     <!-- Custom styles for specific layout and potential overrides -->
     <link rel="stylesheet" href="style.css">
     <style>
@@ -67,16 +67,19 @@
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen items-center justify-center p-4">
 
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-message">
+            <div class="spinner"></div>
+            <span>Loading PDF... Please wait.</span>
+        </div>
+    </div>
+
     <div class="max-w-4xl w-full bg-white rounded-lg shadow-xl p-6 flex flex-col items-center">
         <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">My Digital Reader</h1>
 
         <!-- Flipbook Container -->
         <div id="flipbook" class="flex-grow w-full max-w-3xl aspect-video relative">
-            <div class="loading-message">
-                <!-- CSS-only spinner will be rendered here -->
-                <div class="spinner"></div>
-                <span>Loading PDF... Please wait.</span>
-            </div>
             <!-- PDF pages will be rendered into canvas elements here by app.js -->
         </div>
 
@@ -91,8 +94,8 @@
         </div>
     </div>
 
-    <!-- JavaScript Libraries: jQuery 2.x, Turn.js, then app.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <!-- JavaScript Libraries: jQuery 2.x, PDF.js, Turn.js, then app.js -->
+    <script src="page-flip/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <script src="page-flip/turn.min.js"></script>
     <!-- Your custom application logic -->
