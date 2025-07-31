@@ -51,6 +51,8 @@ function isMobile() {
  */
 function optimizeForMobile() {
     if (isMobile()) {
+        console.log('Mobile device detected - applying mobile optimizations');
+        
         // Make flipbook full screen on mobile for better readability
         $flipbookContainer.css({
             'position': 'fixed',
@@ -89,7 +91,14 @@ function optimizeForMobile() {
         
         // Add mobile navigation overlay
         addMobileNavigationOverlay();
+        
+        // Hide desktop navigation buttons on mobile
+        $('.flex.justify-center.space-x-4').hide();
+        $('.side-nav-btn').hide();
+        
     } else {
+        console.log('Desktop device detected - applying desktop optimizations');
+        
         // Reset to normal desktop layout
         $flipbookContainer.css({
             'position': 'relative',
@@ -112,6 +121,10 @@ function optimizeForMobile() {
         
         // Remove mobile navigation overlay
         $('#mobileNavOverlay').remove();
+        
+        // Show desktop navigation buttons
+        $('.flex.justify-center.space-x-4').show();
+        $('.side-nav-btn').show();
     }
 }
 
@@ -123,15 +136,23 @@ function addTouchSupport() {
     let startY = 0;
     let touchStartTime = 0;
     
-    $flipbookContainer.off('touchstart touchend'); // Remove existing listeners
+    // Remove existing listeners to prevent duplicates
+    $flipbookContainer.off('touchstart touchend touchmove');
     
     $flipbookContainer.on('touchstart', function(e) {
+        console.log('Touch start detected');
         startX = e.originalEvent.touches[0].clientX;
         startY = e.originalEvent.touches[0].clientY;
         touchStartTime = Date.now();
+        e.preventDefault(); // Prevent default to avoid conflicts
+    });
+    
+    $flipbookContainer.on('touchmove', function(e) {
+        e.preventDefault(); // Prevent scrolling while swiping
     });
     
     $flipbookContainer.on('touchend', function(e) {
+        console.log('Touch end detected');
         if (!startX || !startY || isPageTransitioning) return;
         
         const touchEndTime = Date.now();
@@ -145,19 +166,24 @@ function addTouchSupport() {
         const diffX = startX - endX;
         const diffY = startY - endY;
         
+        console.log('Swipe detected:', { diffX, diffY, touchDuration });
+        
         // Check if it's a horizontal swipe (more horizontal than vertical)
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 30) {
             if (diffX > 0) {
                 // Swipe left - next page
+                console.log('Swipe left - going to next page');
                 goToNextPage();
             } else {
                 // Swipe right - previous page
+                console.log('Swipe right - going to previous page');
                 goToPreviousPage();
             }
         }
         
         startX = 0;
         startY = 0;
+        e.preventDefault();
     });
 }
 
@@ -167,10 +193,12 @@ function addTouchSupport() {
 function addSideNavigationSupport() {
     // Add click handlers for side navigation buttons
     $leftNavBtn.on('click', function() {
+        console.log('Left nav button clicked');
         goToPreviousPage();
     });
     
     $rightNavBtn.on('click', function() {
+        console.log('Right nav button clicked');
         goToNextPage();
     });
     
@@ -262,6 +290,7 @@ function addMobileNavigationOverlay() {
     
     // Add event listeners for mobile navigation
     $('#exitFullscreenBtn').on('click', function() {
+        console.log('Exit fullscreen clicked');
         // Exit mobile fullscreen mode
         $flipbookContainer.css({
             'position': 'relative',
@@ -289,10 +318,12 @@ function addMobileNavigationOverlay() {
     });
     
     $('#mobilePrevBtn').on('click', function() {
+        console.log('Mobile prev button clicked');
         goToPreviousPage();
     });
     
     $('#mobileNextBtn').on('click', function() {
+        console.log('Mobile next button clicked');
         goToNextPage();
     });
     
@@ -390,6 +421,7 @@ async function loadPagesInBackground() {
 function displayPage(pageNumber) {
     if (pageNumber < 1 || pageNumber > totalPages || isPageTransitioning) return;
     
+    console.log(`Displaying page ${pageNumber}`);
     isPageTransitioning = true;
     currentPageNumber = pageNumber;
     
@@ -443,6 +475,7 @@ function displayPage(pageNumber) {
  * Go to next page with smooth transition
  */
 function goToNextPage() {
+    console.log(`Attempting to go to next page. Current: ${currentPageNumber}, Total: ${totalPages}`);
     if (currentPageNumber < totalPages && !isPageTransitioning) {
         displayPage(currentPageNumber + 1);
     }
@@ -452,6 +485,7 @@ function goToNextPage() {
  * Go to previous page with smooth transition
  */
 function goToPreviousPage() {
+    console.log(`Attempting to go to previous page. Current: ${currentPageNumber}`);
     if (currentPageNumber > 1 && !isPageTransitioning) {
         displayPage(currentPageNumber - 1);
     }
@@ -514,6 +548,8 @@ async function renderPdfPages() {
  * Initialize the single-page reader
  */
 function initializeReader() {
+    console.log('Initializing reader...');
+    
     // Mobile optimizations
     optimizeForMobile();
     
@@ -529,10 +565,12 @@ function initializeReader() {
 
     // Navigation button handlers
     $prevPageButton.on('click', function() {
+        console.log('Prev page button clicked');
         goToPreviousPage();
     });
 
     $nextPageButton.on('click', function() {
+        console.log('Next page button clicked');
         goToNextPage();
     });
 
@@ -572,6 +610,7 @@ function initializeReader() {
 
 // Initialize when document is ready
 $(document).ready(function() {
+    console.log('Document ready - starting initialization');
     renderPdfPages();
     
     // Add loading animation to buttons

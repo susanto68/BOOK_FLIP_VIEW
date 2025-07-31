@@ -384,6 +384,8 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    opacity: 1;
+    transition: opacity 0.3s ease;
 }
 
 .mobile-nav-header {
@@ -420,6 +422,7 @@ body {
     transition: all 0.15s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
 }
 
 .mobile-nav-btn.large {
@@ -459,6 +462,12 @@ body {
         will-change: transform;
         background-color: #f8fafc;
         min-height: 100vh;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 1000 !important;
     }
     
     /* Hide desktop navigation when in mobile fullscreen */
@@ -515,6 +524,34 @@ body {
     .side-nav-btn {
         display: none !important;
     }
+    
+    /* Ensure mobile navigation overlay is visible */
+    .mobile-nav-overlay {
+        opacity: 1 !important;
+        display: flex !important;
+        pointer-events: auto !important;
+    }
+    
+    .mobile-nav-overlay.hidden {
+        opacity: 0 !important;
+    }
+    
+    .mobile-nav-overlay.show {
+        opacity: 1 !important;
+    }
+    
+    /* Make mobile buttons more touch-friendly */
+    .mobile-nav-btn {
+        min-width: 44px;
+        min-height: 44px;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+    
+    .mobile-nav-btn.large {
+        min-width: 60px;
+        min-height: 60px;
+    }
 }
 
 /* Touch-friendly mobile controls */
@@ -523,12 +560,16 @@ body {
         width: 50px;
         height: 50px;
         font-size: 1.3rem;
+        min-width: 50px;
+        min-height: 50px;
     }
     
     .mobile-nav-btn.large {
         width: 70px;
         height: 70px;
         font-size: 1.8rem;
+        min-width: 70px;
+        min-height: 70px;
     }
     
     .mobile-page-counter {
@@ -591,6 +632,20 @@ body {
     
     .progress-fill {
         animation: none;
+    }
+    
+    /* Ensure touch events work properly */
+    #flipbook {
+        touch-action: pan-y pinch-zoom;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Prevent text selection during swipes */
+    #flipbook * {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
     }
 }
 
