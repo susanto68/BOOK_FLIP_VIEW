@@ -376,11 +376,11 @@ body {
 }
 
 .left-nav-btn {
-    left: -60px;
+    left: 10px;
 }
 
 .right-nav-btn {
-    right: -60px;
+    right: 10px;
 }
 
 .nav-arrow {
@@ -561,11 +561,6 @@ body {
         width: 28px;
         height: 28px;
         margin-bottom: 0.75rem;
-    }
-    
-    /* Hide side navigation buttons on mobile */
-    .side-nav-btn {
-        display: none !important;
     }
     
     /* Ensure mobile navigation overlay is visible */

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flip Animation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔄 Kindle-like Page Flip Animation Test</h1>
+        
+        <div class="status info">
+            <h3>🎯 What to Test:</h3>
+            <ol>
+                <li><strong>Open the main application</strong>: <a href="http://localhost:8000/index.html" target="_blank">http://localhost:8000/index.html</a></li>
+                <li><strong>Wait for the PDF to load completely</strong></li>
+                <li><strong>Test page navigation</strong> using any of these methods:</li>
+                <ul>
+                    <li>Click the left/right side navigation buttons (‹ ›)</li>
+                    <li>Click the bottom Previous/Next buttons</li>
+                    <li>Use arrow keys (← →)</li>
+                    <li>On mobile: Swipe left/right</li>
+                </ul>
+                <li><strong>Observe the page flip animation</strong> - it should look like a real book page turning</li>
+            </ol>
+        </div>
+
+        <div class="status success">
+            <h3>✅ Expected Flip Animation Behavior:</h3>
+            <ul>
+                <li><strong>3D Page Turn Effect</strong>: Pages should flip with a realistic 3D rotation</li>
+                <li><strong>Direction-Aware</strong>: Next page flips from right to left, previous page flips from left to right</li>
+                <li><strong>Smooth Transition</strong>: 0.6-second smooth cubic-bezier animation</li>
+                <li><strong>Perspective Effect</strong>: Pages should appear to turn with depth</li>
+                <li><strong>Single Page Display</strong>: Only one page visible at a time (like Kindle)</li>
+                <li><strong>Page Counter Updates</strong>: Current page number should update correctly</li>
+            </ul>
+        </div>
+
+        <div class="status warning">
+            <h3>⚠️ Common Issues & Solutions:</h3>
+            <ul>
+                <li><strong>No Animation</strong>: Make sure you're not on the first page (animation only happens when navigating)</li>
+                <li><strong>Slow Animation</strong>: Check if you're on mobile (animations are faster on mobile for better performance)</li>
+                <li><strong>Buttons Not Working</strong>: Check browser console for JavaScript errors</li>
+                <li><strong>PDF Not Loading</strong>: Ensure the PDF file exists and server is running</li>
+                <li><strong>Mobile Issues</strong>: Test on actual mobile device, not just browser dev tools</li>
+            </ul>
+        </div>
+
+        <div class="status info">
+            <h3>🔧 Technical Details:</h3>
+            <ul>
+                <li><strong>Animation Duration</strong>: 0.6 seconds (desktop) / 0.4 seconds (mobile)</li>
+                <li><strong>Animation Curve</strong>: cubic-bezier(0.4, 0.0, 0.2, 1)</li>
+                <li><strong>3D Perspective</strong>: 1000px perspective for realistic depth</li>
+                <li><strong>Transform Origin</strong>: Left center for next page, right center for previous page</li>
+                <li><strong>Backface Visibility</strong>: Hidden to prevent seeing through pages</li>
+            </ul>
+        </div>
+
+        <button class="test-button" onclick="window.open('http://localhost:8000/index.html', '_blank')">
+            🚀 Test Flip Animations Now
+        </button>
+        
+        <button class="test-button" onclick="checkAnimationSupport()">
+            🔍 Check Animation Support
+        </button>
+        
+        <button class="test-button" onclick="showTestInstructions()">
+            📋 Show Test Instructions
+        </button>
+
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        function checkAnimationSupport() {
+            const results = document.getElementById('testResults');
+            const supports3D = 'WebKitCSSMatrix' in window && 'm11' in new WebKitCSSMatrix();
+            const supportsTransforms = 'transform' in document.body.style;
+            const supportsTransitions = 'transition' in document.body.style;
+            
+            let html = '<div class="status info"><h3>🔍 Animation Support Check:</h3><ul>';
+            html += `<li>3D Transforms: ${supports3D ? '✅ Supported' : '❌ Not Supported'}</li>`;
+            html += `<li>CSS Transforms: ${supportsTransforms ? '✅ Supported' : '❌ Not Supported'}</li>`;
+            html += `<li>CSS Transitions: ${supportsTransitions ? '✅ Supported' : '❌ Not Supported'}</li>`;
+            html += '</ul></div>';
+            
+            if (supports3D && supportsTransforms && supportsTransitions) {
+                html += '<div class="status success">✅ Your browser supports all required animation features!</div>';
+            } else {
+                html += '<div class="status error">❌ Your browser may not support all animation features. Try a modern browser.</div>';
+            }
+            
+            results.innerHTML = html;
+        }
+
+        function showTestInstructions() {
+            const results = document.getElementById('testResults');
+            const html = `
+                <div class="status info">
+                    <h3>📋 Step-by-Step Test Instructions:</h3>
+                    <ol>
+                        <li><strong>Open the application</strong> in a new tab</li>
+                        <li><strong>Wait for loading</strong> - you should see a progress bar</li>
+                        <li><strong>Look for navigation buttons</strong> - side buttons (‹ ›) and bottom buttons</li>
+                        <li><strong>Click "Next Page"</strong> or right arrow button</li>
+                        <li><strong>Watch for the flip animation</strong> - page should turn like a real book</li>
+                        <li><strong>Click "Previous Page"</strong> or left arrow button</li>
+                        <li><strong>Observe reverse animation</strong> - page should flip back</li>
+                        <li><strong>Test keyboard arrows</strong> - ← → keys should work</li>
+                        <li><strong>Check page counter</strong> - should update with each navigation</li>
+                    </ol>
+                    <p><strong>Expected Result:</strong> Smooth 3D page flip animations that look like turning a real book page!</p>
+                </div>
+            `;
+            results.innerHTML = html;
+        }
+    </script>
+</body>
+</html> 

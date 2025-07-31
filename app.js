@@ -94,37 +94,35 @@ function optimizeForMobile() {
         // Add mobile navigation overlay
         addMobileNavigationOverlay();
         
-        // Hide desktop navigation buttons on mobile
+        // Hide desktop navigation buttons on mobile but keep side nav buttons visible
         $('.flex.justify-center.space-x-4').hide();
-        $('.side-nav-btn').hide();
+        // Don't hide side nav buttons on mobile - they should be visible
+        $('.side-nav-btn').show();
         
     } else {
-        console.log('Desktop device detected - applying desktop optimizations');
-        
-        // Reset to normal desktop layout
+        // Desktop optimizations
         $flipbookContainer.css({
             'position': 'relative',
             'width': '100%',
-            'height': '100%',
-            'max-width': 'none',
-            'max-height': 'none',
-            'border-radius': '12px',
-            'z-index': 'auto'
+            'height': 'auto',
+            'max-width': '100%',
+            'max-height': '90vh',
+            'border-radius': '0.5rem',
+            'z-index': 'auto',
+            'background-color': 'white'
         });
         
         $('.max-w-6xl').css({
             'position': 'relative',
             'width': 'auto',
             'height': 'auto',
-            'max-width': '6xl',
+            'max-width': '72rem',
             'max-height': 'none',
-            'border-radius': '1rem'
+            'border-radius': '0',
+            'z-index': 'auto'
         });
         
-        // Remove mobile navigation overlay
-        $('#mobileNavOverlay').remove();
-        
-        // Show desktop navigation buttons
+        // Show desktop navigation
         $('.flex.justify-center.space-x-4').show();
         $('.side-nav-btn').show();
     }
@@ -193,31 +191,41 @@ function addTouchSupport() {
  * Add click support for desktop side navigation
  */
 function addSideNavigationSupport() {
+    console.log('Adding side navigation support...');
+    
     // Add click handlers for side navigation buttons
-    $leftNavBtn.on('click', function() {
+    $leftNavBtn.off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         console.log('Left nav button clicked');
         goToPreviousPage();
     });
     
-    $rightNavBtn.on('click', function() {
+    $rightNavBtn.off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         console.log('Right nav button clicked');
         goToNextPage();
     });
     
     // Add click handlers for clicking on the flipbook container sides
-    $flipbookContainer.on('click', function(e) {
+    $flipbookContainer.off('click').on('click', function(e) {
         if (isMobile()) return; // Don't use this on mobile
         
         const rect = this.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const containerWidth = rect.width;
         
+        console.log(`Click detected at ${clickX}px in container of width ${containerWidth}px`);
+        
         // If click is in the left third of the container, go to previous page
         if (clickX < containerWidth / 3) {
+            console.log('Left third clicked - going to previous page');
             goToPreviousPage();
         }
         // If click is in the right third of the container, go to next page
         else if (clickX > (containerWidth * 2) / 3) {
+            console.log('Right third clicked - going to next page');
             goToNextPage();
         }
     });
@@ -292,45 +300,34 @@ function addMobileNavigationOverlay() {
     
     // Add event listeners for mobile navigation
     $('#exitFullscreenBtn').on('click', function() {
-        console.log('Exit fullscreen clicked');
-        // Exit mobile fullscreen mode
-        $flipbookContainer.css({
-            'position': 'relative',
-            'width': '100%',
-            'height': '100%',
-            'max-width': 'none',
-            'max-height': 'none',
-            'border-radius': '12px',
-            'z-index': 'auto'
-        });
-        
-        $('.max-w-6xl').css({
-            'position': 'relative',
-            'width': 'auto',
-            'height': 'auto',
-            'max-width': '6xl',
-            'max-height': 'none',
-            'border-radius': '1rem'
-        });
-        
-        $('#mobileNavOverlay').remove();
-        
-        // Trigger window resize to reinitialize
-        $(window).trigger('resize');
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
     });
     
-    $('#mobilePrevBtn').on('click', function() {
+    $('#mobilePrevBtn').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         console.log('Mobile prev button clicked');
         goToPreviousPage();
     });
     
-    $('#mobileNextBtn').on('click', function() {
+    $('#mobileNextBtn').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         console.log('Mobile next button clicked');
         goToNextPage();
     });
     
     // Update mobile page counter
     updateMobilePageCounter();
+    
+    // Show controls initially
+    showControls();
 }
 
 /**
@@ -496,55 +493,82 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
  * Display a single page with Kindle-like flip animation
  */
 async function displayPage(pageNumber) {
-    if (pageNumber < 1 || pageNumber > totalPages || isPageTransitioning) return;
-    
     console.log(`Displaying page ${pageNumber}`);
+    
+    if (pageNumber < 1 || pageNumber > totalPages) {
+        console.log(`Page ${pageNumber} is out of range (1-${totalPages})`);
+        return;
+    }
+    
+    if (isPageTransitioning) {
+        console.log('Page transition in progress, ignoring request');
+        return;
+    }
+    
+    // Set transition flag
     isPageTransitioning = true;
+    
+    // Store previous page for animation
     const previousPage = currentPageNumber;
+    
+    // Update current page number
     currentPageNumber = pageNumber;
     
-    // Get or load the page
-    if (loadedPages.has(pageNumber)) {
-        const nextCanvas = pageCanvases[pageNumber - 1];
-        
-        if (currentPageElement) {
-            // Create flip animation
-            const direction = pageNumber > previousPage ? 'next' : 'prev';
-            await createPageFlipAnimation(currentPageElement, nextCanvas, direction);
-        } else {
-            // First page load - no animation
-            $flipbookContainer.empty().append(nextCanvas);
-        }
-        
-        currentPageElement = nextCanvas;
-        isPageTransitioning = false;
-    } else {
-        // Show loading indicator for current page
-        $flipbookContainer.html(`
-            <div class="page-loading">
-                <div class="spinner"></div>
-                <div>Loading page ${pageNumber}...</div>
-            </div>
-        `);
+    // Check if the page is loaded
+    if (!loadedPages.has(pageNumber)) {
+        console.log(`Page ${pageNumber} not loaded, showing loading spinner`);
+        $flipbookContainer.html('<div class="page-loading"><div class="spinner"></div></div>');
         
         // Load the page
-        const canvas = await renderPage(pageNumber);
-        if (canvas) {
-            $flipbookContainer.empty().append(canvas);
-            currentPageElement = canvas;
-        }
-        isPageTransitioning = false;
+        await renderPage(pageNumber);
     }
+    
+    // Get the canvas for the current page
+    const nextCanvas = pageCanvases[pageNumber - 1];
+    if (!nextCanvas) {
+        console.error(`Canvas for page ${pageNumber} not found`);
+        isPageTransitioning = false;
+        return;
+    }
+    
+    // Get current canvas if it exists
+    const currentCanvas = currentPageElement;
+    
+    // Determine animation direction
+    const direction = pageNumber > previousPage ? 'next' : 'prev';
+    
+    if (currentCanvas && previousPage !== pageNumber) {
+        // Create flip animation
+        console.log(`Creating flip animation from page ${previousPage} to ${pageNumber} (${direction})`);
+        await createPageFlipAnimation(currentCanvas, nextCanvas, direction);
+    } else {
+        // First page load or no current page - no animation
+        console.log('First page load - no animation');
+        $flipbookContainer.empty().append(nextCanvas);
+    }
+    
+    // Update current page element
+    currentPageElement = nextCanvas;
     
     // Update page counters
     $currentPage.text(pageNumber);
     $totalPages.text(totalPages);
-    updateMobilePageCounter();
+    
+    // Update mobile page counter if it exists
+    if ($('#mobileCurrentPage').length) {
+        $('#mobileCurrentPage').text(pageNumber);
+        $('#mobileTotalPages').text(totalPages);
+    }
     
     // Start background loading
-    setTimeout(() => {
+    if (!isLoadingInBackground) {
         loadPagesInBackground();
-    }, 100);
+    }
+    
+    // Reset transition flag
+    isPageTransitioning = false;
+    
+    console.log(`Page ${pageNumber} displayed successfully with flip animation`);
 }
 
 /**
@@ -581,7 +605,7 @@ async function renderPdfPages() {
         totalPages = pdfDoc.numPages;
         
         updateProgress(50, 100, `Processing ${totalPages} pages...`);
-        
+
         // Clear existing content
         $flipbookContainer.empty();
         pageCanvases = new Array(totalPages);
@@ -601,6 +625,9 @@ async function renderPdfPages() {
             
             // Display first page
             displayPage(1);
+            
+            // Initialize reader functionality
+            initializeReader();
         }, 500);
 
     } catch (error) {
@@ -640,12 +667,16 @@ function initializeReader() {
     });
 
     // Navigation button handlers
-    $prevPageButton.on('click', function() {
+    $prevPageButton.off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         console.log('Prev page button clicked');
         goToPreviousPage();
     });
 
-    $nextPageButton.on('click', function() {
+    $nextPageButton.off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         console.log('Next page button clicked');
         goToNextPage();
     });
