@@ -44,11 +44,31 @@ function isMobile() {
  */
 function optimizeForMobile() {
     if (isMobile()) {
-        // Adjust container for mobile
+        // Make flipbook full screen on mobile for better readability
         $flipbookContainer.css({
+            'position': 'fixed',
+            'top': '0',
+            'left': '0',
+            'width': '100vw',
+            'height': '100vh',
             'max-width': '100vw',
-            'height': '60vh',
-            'border-radius': '8px'
+            'max-height': '100vh',
+            'border-radius': '0',
+            'z-index': '1000',
+            'background-color': '#f8fafc'
+        });
+        
+        // Hide the main container header and navigation on mobile fullscreen
+        $('.max-w-6xl').css({
+            'position': 'fixed',
+            'top': '0',
+            'left': '0',
+            'width': '100vw',
+            'height': '100vh',
+            'max-width': '100vw',
+            'max-height': '100vh',
+            'border-radius': '0',
+            'z-index': '999'
         });
         
         // Show gesture indicator briefly
@@ -59,6 +79,32 @@ function optimizeForMobile() {
         
         // Add touch event listeners for better mobile interaction
         addTouchSupport();
+        
+        // Add mobile navigation overlay
+        addMobileNavigationOverlay();
+    } else {
+        // Reset to normal desktop layout
+        $flipbookContainer.css({
+            'position': 'relative',
+            'width': '100%',
+            'height': '100%',
+            'max-width': 'none',
+            'max-height': 'none',
+            'border-radius': '12px',
+            'z-index': 'auto'
+        });
+        
+        $('.max-w-6xl').css({
+            'position': 'relative',
+            'width': 'auto',
+            'height': 'auto',
+            'max-width': '6xl',
+            'max-height': 'none',
+            'border-radius': '1rem'
+        });
+        
+        // Remove mobile navigation overlay
+        $('#mobileNavOverlay').remove();
     }
 }
 
@@ -122,6 +168,100 @@ function toggleFullscreen() {
 }
 
 /**
+ * Add mobile navigation overlay for fullscreen mode
+ */
+function addMobileNavigationOverlay() {
+    // Remove existing overlay if any
+    $('#mobileNavOverlay').remove();
+    
+    const overlay = $(`
+        <div id="mobileNavOverlay" class="mobile-nav-overlay">
+            <div class="mobile-nav-header">
+                <button id="exitFullscreenBtn" class="mobile-nav-btn">
+                    <span>✕</span>
+                </button>
+                <div class="mobile-page-counter">
+                    Page <span id="mobileCurrentPage">1</span> of <span id="mobileTotalPages">1</span>
+                </div>
+            </div>
+            <div class="mobile-nav-controls">
+                <button id="mobilePrevBtn" class="mobile-nav-btn large">
+                    <span>←</span>
+                </button>
+                <button id="mobileNextBtn" class="mobile-nav-btn large">
+                    <span>→</span>
+                </button>
+            </div>
+        </div>
+    `);
+    
+    $('body').append(overlay);
+    
+    // Add auto-hide functionality for mobile controls
+    let hideTimeout;
+    
+    function showControls() {
+        $('#mobileNavOverlay').removeClass('hidden').addClass('show');
+        clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(() => {
+            $('#mobileNavOverlay').removeClass('show').addClass('hidden');
+        }, 3000);
+    }
+    
+    // Show controls on touch
+    $flipbookContainer.on('touchstart', showControls);
+    
+    // Add event listeners for mobile navigation
+    $('#exitFullscreenBtn').on('click', function() {
+        // Exit mobile fullscreen mode
+        $flipbookContainer.css({
+            'position': 'relative',
+            'width': '100%',
+            'height': '100%',
+            'max-width': 'none',
+            'max-height': 'none',
+            'border-radius': '12px',
+            'z-index': 'auto'
+        });
+        
+        $('.max-w-6xl').css({
+            'position': 'relative',
+            'width': 'auto',
+            'height': 'auto',
+            'max-width': '6xl',
+            'max-height': 'none',
+            'border-radius': '1rem'
+        });
+        
+        $('#mobileNavOverlay').remove();
+        
+        // Trigger window resize to reinitialize
+        $(window).trigger('resize');
+    });
+    
+    $('#mobilePrevBtn').on('click', function() {
+        $flipbookContainer.turn('previous');
+    });
+    
+    $('#mobileNextBtn').on('click', function() {
+        $flipbookContainer.turn('next');
+    });
+    
+    // Update mobile page counter
+    updateMobilePageCounter();
+}
+
+/**
+ * Update mobile page counter
+ */
+function updateMobilePageCounter() {
+    if (pdfDoc) {
+        $('#mobileCurrentPage').text($currentPage.text());
+        $('#mobileTotalPages').text(pdfDoc.numPages);
+    }
+}
+
+/**
  * Loads and renders PDF pages with progress tracking
  */
 async function renderPdfPages() {
@@ -144,8 +284,8 @@ async function renderPdfPages() {
         for (let i = 1; i <= numPages; i++) {
             const page = await pdfDoc.getPage(i);
             
-            // Adjust scale based on device
-            const scale = isMobile() ? 1.2 : 1.5;
+            // Adjust scale based on device - higher scale for mobile for better readability
+            const scale = isMobile() ? 2.0 : 1.5;
             const viewport = page.getViewport({ scale });
 
             const canvas = document.createElement('canvas');
@@ -230,6 +370,7 @@ function initializeFlipbook() {
                 // Update page counter
                 $currentPage.text(page);
                 $totalPages.text(pdfDoc.numPages);
+                updateMobilePageCounter(); // Update mobile counter on turn
             },
             turned: function(event, page, view) {
                 // Add page turn sound effect (optional)
