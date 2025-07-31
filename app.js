@@ -419,10 +419,9 @@ async function loadPagesInBackground() {
  */
 function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
     return new Promise((resolve) => {
-        const container = $flipbookContainer[0];
-        const containerRect = container.getBoundingClientRect();
+        console.log(`Starting ${direction} page flip animation`);
         
-        // Create page flip container
+        // Create page flip container with 3D perspective
         const flipContainer = document.createElement('div');
         flipContainer.className = 'page-flip-container';
         flipContainer.style.cssText = `
@@ -431,14 +430,24 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             left: 0;
             width: 100%;
             height: 100%;
-            perspective: 1000px;
+            perspective: 1200px;
+            transform-style: preserve-3d;
             z-index: 1000;
         `;
         
-        // Create current page element
+        // Create current page element (the page being turned)
         const currentPage = document.createElement('div');
         currentPage.className = 'page-flip-current';
-        currentPage.appendChild(currentCanvas.cloneNode(true));
+        const currentCanvasClone = currentCanvas.cloneNode(true);
+        currentCanvasClone.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        `;
+        currentPage.appendChild(currentCanvasClone);
         currentPage.style.cssText = `
             position: absolute;
             top: 0;
@@ -446,15 +455,26 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             width: 100%;
             height: 100%;
             transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
+            transform: rotateY(0deg);
             transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
             backface-visibility: hidden;
+            transform-style: preserve-3d;
             z-index: 2;
         `;
         
-        // Create next page element
+        // Create next page element (the page being revealed)
         const nextPage = document.createElement('div');
         nextPage.className = 'page-flip-next';
-        nextPage.appendChild(nextCanvas.cloneNode(true));
+        const nextCanvasClone = nextCanvas.cloneNode(true);
+        nextCanvasClone.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        `;
+        nextPage.appendChild(nextCanvasClone);
         nextPage.style.cssText = `
             position: absolute;
             top: 0;
@@ -465,6 +485,7 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             transform: rotateY(${direction === 'next' ? '-90deg' : '90deg'});
             transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
             backface-visibility: hidden;
+            transform-style: preserve-3d;
             z-index: 1;
         `;
         
@@ -472,20 +493,25 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
         flipContainer.appendChild(currentPage);
         flipContainer.appendChild(nextPage);
         
-        // Add flip container to main container
-        $flipbookContainer.append(flipContainer);
+        // Clear container and add flip container
+        $flipbookContainer.empty().append(flipContainer);
         
-        // Start animation
+        // Force reflow to ensure initial state is applied
+        flipContainer.offsetHeight;
+        
+        // Start the flip animation
         setTimeout(() => {
+            console.log(`Executing ${direction} flip animation`);
             currentPage.style.transform = `rotateY(${direction === 'next' ? '90deg' : '-90deg'})`;
             nextPage.style.transform = 'rotateY(0deg)';
         }, 50);
         
-        // Clean up after animation
+        // Clean up after animation completes
         setTimeout(() => {
+            console.log('Animation complete, cleaning up');
             $flipbookContainer.empty().append(nextCanvas);
             resolve();
-        }, 600);
+        }, 650); // Slightly longer than transition to ensure completion
     });
 }
 

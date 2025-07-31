@@ -281,7 +281,8 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    perspective: 1000px;
+    perspective: 1200px;
+    transform-style: preserve-3d;
     z-index: 1000;
 }
 
@@ -295,6 +296,7 @@ body {
     backface-visibility: hidden;
     transform-style: preserve-3d;
     transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+    will-change: transform;
 }
 
 .page-flip-current {
@@ -313,6 +315,7 @@ body {
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     background-color: white;
+    transform: translateZ(0);
 }
 
 /* Enhanced page display - Larger for better reading experience */
@@ -595,6 +598,11 @@ body {
     .page-flip-current,
     .page-flip-next {
         transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        will-change: transform;
+    }
+    
+    .page-flip-container {
+        perspective: 800px;
     }
 }
 
