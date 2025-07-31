@@ -22,6 +22,10 @@ const $gestureIndicator = $('#gestureIndicator');
 let pdfDoc = null;
 let pageCanvases = [];
 let isFullscreen = false;
+let isInitialLoad = true;
+let loadedPages = new Set(); // Track which pages are loaded
+let totalPages = 0;
+let initialLoadCount = 5; // Load only 5 pages initially
 
 /**
  * Shows progress during PDF loading
@@ -109,19 +113,29 @@ function optimizeForMobile() {
 }
 
 /**
- * Add touch support for mobile devices
+ * Add touch support for mobile devices with improved performance
  */
 function addTouchSupport() {
     let startX = 0;
     let startY = 0;
+    let touchStartTime = 0;
+    
+    $flipbookContainer.off('touchstart touchend'); // Remove existing listeners
     
     $flipbookContainer.on('touchstart', function(e) {
         startX = e.originalEvent.touches[0].clientX;
         startY = e.originalEvent.touches[0].clientY;
+        touchStartTime = Date.now();
     });
     
     $flipbookContainer.on('touchend', function(e) {
         if (!startX || !startY) return;
+        
+        const touchEndTime = Date.now();
+        const touchDuration = touchEndTime - touchStartTime;
+        
+        // Only process if touch duration is reasonable (not too long)
+        if (touchDuration > 1000) return;
         
         const endX = e.originalEvent.changedTouches[0].clientX;
         const endY = e.originalEvent.changedTouches[0].clientY;
@@ -129,7 +143,7 @@ function addTouchSupport() {
         const diffY = startY - endY;
         
         // Check if it's a horizontal swipe (more horizontal than vertical)
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 30) {
             if (diffX > 0) {
                 // Swipe left - next page
                 $flipbookContainer.turn('next');
@@ -262,7 +276,72 @@ function updateMobilePageCounter() {
 }
 
 /**
- * Loads and renders PDF pages with progress tracking
+ * Render a single page with optimized settings
+ */
+async function renderPage(pageNumber) {
+    if (loadedPages.has(pageNumber)) {
+        return pageCanvases[pageNumber - 1];
+    }
+    
+    try {
+        const page = await pdfDoc.getPage(pageNumber);
+        
+        // Optimized scale for mobile performance
+        const scale = isMobile() ? 1.5 : 1.5; // Reduced from 2.0 for better performance
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport }).promise;
+        
+        $(canvas).addClass('turn-page');
+        
+        // Store canvas at correct index
+        pageCanvases[pageNumber - 1] = canvas;
+        loadedPages.add(pageNumber);
+        
+        return canvas;
+    } catch (error) {
+        console.error(`Error rendering page ${pageNumber}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Load pages progressively
+ */
+async function loadPagesProgressively(startPage, endPage) {
+    const pagesToLoad = [];
+    for (let i = startPage; i <= endPage; i++) {
+        if (!loadedPages.has(i)) {
+            pagesToLoad.push(i);
+        }
+    }
+    
+    if (pagesToLoad.length === 0) return;
+    
+    // Load pages in parallel for better performance
+    const loadPromises = pagesToLoad.map(async (pageNum) => {
+        const canvas = await renderPage(pageNum);
+        if (canvas) {
+            // Insert canvas at correct position
+            const existingCanvas = $flipbookContainer.find(`canvas[data-page="${pageNum}"]`);
+            if (existingCanvas.length === 0) {
+                canvas.setAttribute('data-page', pageNum);
+                $flipbookContainer.append(canvas);
+            }
+        }
+    });
+    
+    await Promise.all(loadPromises);
+}
+
+/**
+ * Loads and renders PDF pages with progressive loading
  */
 async function renderPdfPages() {
     try {
@@ -272,41 +351,22 @@ async function renderPdfPages() {
 
         // Load PDF document
         pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
-        const numPages = pdfDoc.numPages;
+        totalPages = pdfDoc.numPages;
         
-        updateProgress(10, 100, `Processing ${numPages} pages...`);
+        updateProgress(20, 100, `Processing ${totalPages} pages...`);
         
         // Clear existing content
         $flipbookContainer.empty();
-        pageCanvases = [];
-
-        // Render pages with progress updates
-        for (let i = 1; i <= numPages; i++) {
-            const page = await pdfDoc.getPage(i);
-            
-            // Adjust scale based on device - higher scale for mobile for better readability
-            const scale = isMobile() ? 2.0 : 1.5;
-            const viewport = page.getViewport({ scale });
-
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            await page.render({ canvasContext: context, viewport }).promise;
-            
-            $(canvas).addClass('turn-page');
-            pageCanvases.push(canvas);
-            
-            // Update progress
-            const progress = 10 + ((i / numPages) * 80);
-            updateProgress(progress, 100, `Rendering page ${i} of ${numPages}...`);
-        }
-
-        updateProgress(95, 100, 'Initializing flipbook...');
+        pageCanvases = new Array(totalPages);
+        loadedPages.clear();
         
-        // Initialize flipbook
+        // Load initial pages (first 5 pages)
+        updateProgress(30, 100, 'Loading initial pages...');
+        await loadPagesProgressively(1, Math.min(initialLoadCount, totalPages));
+        
+        updateProgress(60, 100, 'Initializing flipbook...');
+        
+        // Initialize flipbook with initial pages
         initializeFlipbook();
         
         updateProgress(100, 100, 'Ready!');
@@ -339,13 +399,12 @@ async function renderPdfPages() {
  * Initialize Turn.js flipbook with enhanced features
  */
 function initializeFlipbook() {
-    // Append rendered canvases
-    pageCanvases.forEach(canvas => {
-        $flipbookContainer.append(canvas);
-    });
-
-    const pageWidth = pageCanvases[0].width;
-    const pageHeight = pageCanvases[0].height;
+    // Calculate dimensions based on first loaded page
+    const firstLoadedPage = pageCanvases.find(canvas => canvas);
+    if (!firstLoadedPage) return;
+    
+    const pageWidth = firstLoadedPage.width;
+    const pageHeight = firstLoadedPage.height;
 
     // Responsive sizing
     const maxFlipbookWidth = Math.min(
@@ -362,19 +421,24 @@ function initializeFlipbook() {
         autoCenter: true,
         acceleration: true,
         display: isMobile() ? 'single' : 'double',
-        duration: 600,
+        duration: 400, // Faster animation for better responsiveness
         gradients: true,
-        elevation: 50,
+        elevation: 30, // Reduced for better performance
         when: {
             turning: function(event, page, view) {
                 // Update page counter
                 $currentPage.text(page);
-                $totalPages.text(pdfDoc.numPages);
-                updateMobilePageCounter(); // Update mobile counter on turn
+                $totalPages.text(totalPages);
+                updateMobilePageCounter();
+                
+                // Preload nearby pages
+                const preloadRange = 3;
+                const startPage = Math.max(1, page - preloadRange);
+                const endPage = Math.min(totalPages, page + preloadRange);
+                loadPagesProgressively(startPage, endPage);
             },
             turned: function(event, page, view) {
-                // Add page turn sound effect (optional)
-                // playPageTurnSound();
+                // Page turned successfully
             }
         }
     });
@@ -429,7 +493,7 @@ function initializeFlipbook() {
 
     // Update page counter initially
     $currentPage.text(1);
-    $totalPages.text(pdfDoc.numPages);
+    $totalPages.text(totalPages);
 }
 
 // Initialize when document is ready

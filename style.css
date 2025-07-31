@@ -319,8 +319,9 @@ body {
     font-weight: bold;
     color: #374151;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease; /* Faster transition for better responsiveness */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
 }
 
 .mobile-nav-btn.large {
@@ -331,12 +332,13 @@ body {
 
 .mobile-nav-btn:hover {
     background: rgba(255, 255, 255, 1);
-    transform: scale(1.1);
+    transform: scale(1.05); /* Reduced scale for faster response */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .mobile-nav-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.98); /* Faster active state */
+    transition: transform 0.05s ease;
 }
 
 .mobile-page-counter {
@@ -355,6 +357,9 @@ body {
     #flipbook {
         border-radius: 0 !important;
         box-shadow: none !important;
+        /* Optimize for mobile performance */
+        transform: translateZ(0); /* Hardware acceleration */
+        will-change: transform; /* Optimize for animations */
     }
     
     /* Hide desktop navigation when in mobile fullscreen */
@@ -367,12 +372,29 @@ body {
         width: 100vw !important;
         height: 100vh !important;
         object-fit: contain;
+        /* Optimize canvas rendering */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
     }
     
     /* Optimize text size for mobile reading */
     .turn-page {
         font-size: 16px;
         line-height: 1.6;
+    }
+    
+    /* Reduce animations on mobile for better performance */
+    .nav-btn {
+        transition: all 0.15s ease;
+    }
+    
+    .nav-btn:hover {
+        transform: translateY(-1px);
+    }
+    
+    .nav-btn:active {
+        transform: translateY(0);
+        transition: transform 0.05s ease;
     }
 }
 
@@ -398,7 +420,7 @@ body {
 
 /* Smooth transitions for mobile fullscreen */
 .mobile-nav-overlay {
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.2s ease; /* Faster animation */
 }
 
 @keyframes fadeIn {
@@ -413,11 +435,42 @@ body {
 /* Auto-hide mobile controls after inactivity */
 .mobile-nav-overlay.hidden {
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.2s ease; /* Faster transition */
 }
 
 /* Show controls on touch */
 .mobile-nav-overlay.show {
     opacity: 1;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.2s ease; /* Faster transition */
+}
+
+/* Performance optimizations for mobile */
+@media (max-width: 768px) {
+    /* Reduce motion for better performance */
+    * {
+        animation-duration: 0.2s !important;
+        transition-duration: 0.15s !important;
+    }
+    
+    /* Optimize page flipping */
+    .turn-page {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        perspective: 1000px;
+    }
+    
+    /* Faster button responses */
+    .nav-btn, .mobile-nav-btn {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+    
+    /* Optimize loading animations */
+    .spinner {
+        animation-duration: 0.8s !important;
+    }
+    
+    .progress-fill {
+        animation: none; /* Disable progress glow on mobile for performance */
+    }
 }
