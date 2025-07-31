@@ -1,146 +1,254 @@
 // app.js
 
-// Set up PDF.js worker source. This is crucial for PDF.js to function correctly
-// by offloading heavy rendering tasks to a web worker, keeping the UI responsive.
+// Set up PDF.js worker source
 pdfjsLib.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
-// Define the path to your PDF document.
-// Using the Python programming PDF that's available in the project
+// Define the path to your PDF document
 const pdfUrl = 'Introduction_to_Python_Programming_-_WEB.pdf';
 
-// Get references to the HTML elements using jQuery, as Turn.js often relies on it.
+// Get references to HTML elements
 const $flipbookContainer = $('#flipbook');
 const $prevPageButton = $('#prevPage');
 const $nextPageButton = $('#nextPage');
-const $loadingMessage = $('.loading-message'); // The loading message element
 const $loadingOverlay = $('#loadingOverlay');
+const $progressFill = $('#progressFill');
+const $loadingText = $('#loadingText');
+const $pageCounter = $('#pageCounter');
+const $currentPage = $('#currentPage');
+const $totalPages = $('#totalPages');
+const $fullscreenBtn = $('#fullscreenBtn');
+const $gestureIndicator = $('#gestureIndicator');
 
-let pdfDoc = null; // Stores the loaded PDF document object
-let pageCanvases = []; // Array to store canvas elements for each PDF page
+let pdfDoc = null;
+let pageCanvases = [];
+let isFullscreen = false;
 
 /**
- * Loads the PDF document and renders each page onto a separate HTML canvas element.
- * This function is asynchronous because PDF loading and rendering are time-consuming operations.
+ * Shows progress during PDF loading
+ */
+function updateProgress(current, total, message) {
+    const percentage = (current / total) * 100;
+    $progressFill.css('width', percentage + '%');
+    $loadingText.text(message);
+}
+
+/**
+ * Enhanced mobile detection and optimization
+ */
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+}
+
+/**
+ * Optimize flipbook for mobile devices
+ */
+function optimizeForMobile() {
+    if (isMobile()) {
+        // Adjust container for mobile
+        $flipbookContainer.css({
+            'max-width': '100vw',
+            'height': '60vh',
+            'border-radius': '8px'
+        });
+        
+        // Show gesture indicator briefly
+        $gestureIndicator.addClass('show');
+        setTimeout(() => {
+            $gestureIndicator.removeClass('show');
+        }, 3000);
+        
+        // Add touch event listeners for better mobile interaction
+        addTouchSupport();
+    }
+}
+
+/**
+ * Add touch support for mobile devices
+ */
+function addTouchSupport() {
+    let startX = 0;
+    let startY = 0;
+    
+    $flipbookContainer.on('touchstart', function(e) {
+        startX = e.originalEvent.touches[0].clientX;
+        startY = e.originalEvent.touches[0].clientY;
+    });
+    
+    $flipbookContainer.on('touchend', function(e) {
+        if (!startX || !startY) return;
+        
+        const endX = e.originalEvent.changedTouches[0].clientX;
+        const endY = e.originalEvent.changedTouches[0].clientY;
+        const diffX = startX - endX;
+        const diffY = startY - endY;
+        
+        // Check if it's a horizontal swipe (more horizontal than vertical)
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+            if (diffX > 0) {
+                // Swipe left - next page
+                $flipbookContainer.turn('next');
+            } else {
+                // Swipe right - previous page
+                $flipbookContainer.turn('previous');
+            }
+        }
+        
+        startX = 0;
+        startY = 0;
+    });
+}
+
+/**
+ * Toggle fullscreen mode
+ */
+function toggleFullscreen() {
+    if (!isFullscreen) {
+        if ($flipbookContainer[0].requestFullscreen) {
+            $flipbookContainer[0].requestFullscreen();
+        } else if ($flipbookContainer[0].webkitRequestFullscreen) {
+            $flipbookContainer[0].webkitRequestFullscreen();
+        } else if ($flipbookContainer[0].msRequestFullscreen) {
+            $flipbookContainer[0].msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+}
+
+/**
+ * Loads and renders PDF pages with progress tracking
  */
 async function renderPdfPages() {
     try {
-        // Show the loading overlay while PDF is being processed
         $loadingOverlay.removeClass('hidden');
-        $loadingMessage.show();
-        $flipbookContainer.hide(); // Hide the flipbook container initially
+        $flipbookContainer.hide();
+        updateProgress(0, 100, 'Loading PDF document...');
 
-        // 1. Load the PDF document
-        // pdfjsLib.getDocument returns a PDFDocumentProxy object
+        // Load PDF document
         pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
         const numPages = pdfDoc.numPages;
-
-        // Clear any existing content in the flipbook container
+        
+        updateProgress(10, 100, `Processing ${numPages} pages...`);
+        
+        // Clear existing content
         $flipbookContainer.empty();
+        pageCanvases = [];
 
-        // 2. Iterate through each page of the PDF and render it
+        // Render pages with progress updates
         for (let i = 1; i <= numPages; i++) {
             const page = await pdfDoc.getPage(i);
+            
+            // Adjust scale based on device
+            const scale = isMobile() ? 1.2 : 1.5;
+            const viewport = page.getViewport({ scale });
 
-            // Get the viewport for the page with a specific scale.
-            // Adjust the scale (e.g., 1.5, 2.0) to control the resolution of the rendered pages.
-            // Higher scale means better quality but more memory usage and longer rendering time.
-            const viewport = page.getViewport({ scale: 1.5 });
-
-            // Create a new canvas element for each page
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
 
-            // Set canvas dimensions based on the viewport
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
-            // Render the PDF page onto the canvas
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-            // Add a class for Turn.js to identify pages if needed, though Turn.js often wraps them.
+            await page.render({ canvasContext: context, viewport }).promise;
+            
             $(canvas).addClass('turn-page');
-
-            // Store the canvas element
             pageCanvases.push(canvas);
+            
+            // Update progress
+            const progress = 10 + ((i / numPages) * 80);
+            updateProgress(progress, 100, `Rendering page ${i} of ${numPages}...`);
         }
 
-        // 3. Initialize the Turn.js flipbook once all pages are rendered
+        updateProgress(95, 100, 'Initializing flipbook...');
+        
+        // Initialize flipbook
         initializeFlipbook();
-
-        // Hide the loading overlay and message, show the flipbook
-        $loadingOverlay.addClass('hidden');
-        $loadingMessage.hide();
-        $flipbookContainer.show();
+        
+        updateProgress(100, 100, 'Ready!');
+        
+        // Hide loading overlay after a brief delay
+        setTimeout(() => {
+            $loadingOverlay.addClass('hidden');
+            $flipbookContainer.show();
+            $pageCounter.removeClass('hidden');
+        }, 500);
 
     } catch (error) {
-        // Log any errors during PDF loading or rendering
         console.error('Error loading or rendering PDF:', error);
-        $loadingOverlay.find('.loading-message').html('<span class="text-red-500">Error loading PDF. Please check the console for details.</span>');
+        $loadingOverlay.find('.loading-message').html(`
+            <div class="text-red-500 text-center">
+                <div class="text-2xl mb-2">⚠️</div>
+                <div class="font-medium">Error loading PDF</div>
+                <div class="text-sm mt-2">${error.message}</div>
+                <button onclick="location.reload()" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                    Try Again
+                </button>
+            </div>
+        `);
         $loadingOverlay.removeClass('hidden');
         $flipbookContainer.hide();
     }
 }
 
-function isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-function adjustFlipbookForMobile() {
-    if (isMobile()) {
-        // Make flipbook fill the viewport
-        $('#flipbook').css({
-            width: window.innerWidth + 'px',
-            height: window.innerHeight + 'px',
-            maxWidth: '100vw',
-            maxHeight: '100vh',
-            borderRadius: 0,
-            padding: 0
-        });
-        // Show flip indicator
-        $('#flip-indicator').removeClass('hidden');
-    } else {
-        // Hide flip indicator on desktop
-        $('#flip-indicator').addClass('hidden');
-    }
-}
-
 /**
- * Initializes the Turn.js library on the flipbook container.
- * This function should be called only after all PDF pages have been rendered to canvases.
+ * Initialize Turn.js flipbook with enhanced features
  */
 function initializeFlipbook() {
-    // Append each rendered canvas to the flipbook container
+    // Append rendered canvases
     pageCanvases.forEach(canvas => {
         $flipbookContainer.append(canvas);
     });
 
-    // Calculate optimal width and height for Turn.js based on the first page's dimensions.
-    // Turn.js works best with explicit dimensions.
-    // For 'single' display, the width should be the page width.
     const pageWidth = pageCanvases[0].width;
     const pageHeight = pageCanvases[0].height;
 
-    // Responsive: Use 90vw or parent width, but never more than the page's natural width
-    const maxFlipbookWidth = Math.min($flipbookContainer.parent().width() * 0.98, pageWidth, window.innerWidth * 0.98);
+    // Responsive sizing
+    const maxFlipbookWidth = Math.min(
+        $flipbookContainer.parent().width() * 0.95, 
+        pageWidth, 
+        window.innerWidth * 0.95
+    );
     const calculatedFlipbookHeight = maxFlipbookWidth / (pageWidth / pageHeight);
 
-    // Initialize Turn.js with the calculated dimensions and other options.
-    // 'display: "single"' shows one page at a time.
+    // Initialize Turn.js with optimized settings
     $flipbookContainer.turn({
         width: maxFlipbookWidth,
         height: calculatedFlipbookHeight,
         autoCenter: true,
         acceleration: true,
-        display: 'single', // Changed from 'double' to 'single'
-        duration: 800, // 800ms for a smooth flip
-        // Add more Turn.js options here if needed
+        display: isMobile() ? 'single' : 'double',
+        duration: 600,
+        gradients: true,
+        elevation: 50,
+        when: {
+            turning: function(event, page, view) {
+                // Update page counter
+                $currentPage.text(page);
+                $totalPages.text(pdfDoc.numPages);
+            },
+            turned: function(event, page, view) {
+                // Add page turn sound effect (optional)
+                // playPageTurnSound();
+            }
+        }
     });
 
-    // After initializing Turn.js:
-    adjustFlipbookForMobile();
-    $(window).on('resize', adjustFlipbookForMobile);
+    // Mobile optimizations
+    optimizeForMobile();
+    
+    // Window resize handler
+    $(window).on('resize', function() {
+        setTimeout(() => {
+            optimizeForMobile();
+        }, 100);
+    });
 
-    // Add event listeners for navigation buttons
+    // Navigation button handlers
     $prevPageButton.on('click', function() {
         $flipbookContainer.turn('previous');
     });
@@ -149,25 +257,49 @@ function initializeFlipbook() {
         $flipbookContainer.turn('next');
     });
 
-    // Optional: Keyboard navigation (left/right arrow keys)
-    $(document).keydown(function(e) {
-        if (e.keyCode === 37) { // Left arrow key
-            $flipbookContainer.turn('previous');
-            e.preventDefault(); // Prevent default browser scroll
-        } else if (e.keyCode === 39) { // Right arrow key
-            $flipbookContainer.turn('next');
-            e.preventDefault(); // Prevent default browser scroll
+    // Fullscreen button handler
+    $fullscreenBtn.on('click', toggleFullscreen);
+
+    // Fullscreen change event
+    $(document).on('fullscreenchange webkitfullscreenchange mozfullscreenchange MSFullscreenChange', function() {
+        isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || 
+                         document.mozFullScreenElement || document.msFullscreenElement);
+        
+        if (isFullscreen) {
+            $fullscreenBtn.html('<span class="hidden sm:inline">Exit Fullscreen</span><span class="sm:hidden">⛶</span>');
+        } else {
+            $fullscreenBtn.html('<span class="hidden sm:inline">Fullscreen</span><span class="sm:hidden">⛶</span>');
         }
     });
 
-    // Optional: Event listener for when a page is turned
-    $flipbookContainer.bind('turned', function(event, page, view) {
-        console.log('Current page:', page, 'View:', view);
-        // You can update a page number display here if you add one to your HTML
+    // Enhanced keyboard navigation
+    $(document).keydown(function(e) {
+        if (e.keyCode === 37) { // Left arrow
+            $flipbookContainer.turn('previous');
+            e.preventDefault();
+        } else if (e.keyCode === 39) { // Right arrow
+            $flipbookContainer.turn('next');
+            e.preventDefault();
+        } else if (e.keyCode === 70) { // F key for fullscreen
+            toggleFullscreen();
+            e.preventDefault();
+        }
     });
+
+    // Update page counter initially
+    $currentPage.text(1);
+    $totalPages.text(pdfDoc.numPages);
 }
 
-// Start the process: render PDF pages when the document is ready
+// Initialize when document is ready
 $(document).ready(function() {
     renderPdfPages();
+    
+    // Add loading animation to buttons
+    $('.nav-btn').on('click', function() {
+        $(this).addClass('scale-95');
+        setTimeout(() => {
+            $(this).removeClass('scale-95');
+        }, 150);
+    });
 });
