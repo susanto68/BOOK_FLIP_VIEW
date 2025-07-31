@@ -2,87 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Kindle-like Reader</title>
-    <!-- Tailwind CSS (CDN) -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <!-- PDF.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Custom CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Book Reader</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50">
-        <div class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <div id="loadingText" class="text-gray-600 font-medium">Loading PDF...</div>
-            <div class="w-64 bg-gray-200 rounded-full h-2 mt-4">
-                <div id="progressFill" class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+<body>
+    <!-- Book Selection Screen -->
+    <div id="book-selection" class="screen active">
+        <div class="container">
+            <header class="header">
+                <h1 class="title">📚 PDF Book Reader</h1>
+                <p class="subtitle">Select a book to start reading</p>
+            </header>
+            
+            <div id="books-grid" class="books-grid">
+                <!-- Books will be loaded here dynamically -->
+            </div>
+            
+            <div id="loading-books" class="loading">
+                <div class="spinner"></div>
+                <p>Loading books...</p>
+            </div>
+            
+            <div id="no-books" class="no-books hidden">
+                <div class="empty-state">
+                    <div class="empty-icon">📖</div>
+                    <h3>No PDF Books Found</h3>
+                    <p>Add PDF files to the <code>/pdf/</code> folder to get started.</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Container -->
-    <div class="max-w-6xl mx-auto p-4">
-        <!-- Header -->
-        <div class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Digital Book Reader</h1>
-            <p class="text-gray-600">Experience reading like never before</p>
+    <!-- Book Reader Screen -->
+    <div id="book-reader" class="screen">
+        <div class="reader-header">
+            <button id="back-button" class="back-btn">
+                <span class="back-icon">←</span>
+                <span class="back-text">Back to Library</span>
+            </button>
+            <div class="book-info">
+                <h2 id="book-title">Book Title</h2>
+                <div class="page-info">
+                    <span id="current-page">1</span>
+                    <span class="separator">/</span>
+                    <span id="total-pages">1</span>
+                </div>
+            </div>
+            <button id="fullscreen-btn" class="fullscreen-btn">
+                <span class="fullscreen-icon">⛶</span>
+            </button>
         </div>
 
-        <!-- Page Counter -->
-        <div id="pageCounter" class="hidden flex justify-center mb-4">
-            <div class="page-counter">
-                Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+        <div id="flipbook-container" class="flipbook-container">
+            <div id="stf-parent" class="stf-parent">
+                <!-- StPageFlip will render here -->
             </div>
         </div>
 
-        <!-- Reader Container with Side Navigation -->
-        <div class="relative">
-            <!-- Left Navigation Button -->
-            <button id="leftNavBtn" class="side-nav-btn left-nav-btn">
-                <span class="nav-arrow">‹</span>
+        <div class="reader-controls">
+            <button id="prev-page" class="control-btn">
+                <span class="control-icon">‹</span>
+                <span class="control-text">Previous</span>
             </button>
-
-            <!-- Right Navigation Button -->
-            <button id="rightNavBtn" class="side-nav-btn right-nav-btn">
-                <span class="nav-arrow">›</span>
-            </button>
-
-            <!-- Flipbook Container -->
-            <div id="flipbook" class="bg-white rounded-lg shadow-lg overflow-hidden">
-                <!-- Content will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Bottom Navigation -->
-        <div class="flex justify-center space-x-4 mt-6">
-            <button id="prevPage" class="nav-btn bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95">
-                <span class="hidden sm:inline">Previous Page</span>
-                <span class="sm:hidden">←</span>
-            </button>
-            
-            <button id="fullscreenBtn" class="nav-btn bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95">
-                <span class="hidden sm:inline">Fullscreen</span>
-                <span class="sm:hidden">⛶</span>
-            </button>
-            
-            <button id="nextPage" class="nav-btn bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95">
-                <span class="hidden sm:inline">Next Page</span>
-                <span class="sm:hidden">→</span>
+            <button id="next-page" class="control-btn">
+                <span class="control-text">Next</span>
+                <span class="control-icon">›</span>
             </button>
         </div>
 
-        <!-- Gesture Indicator for Mobile -->
-        <div id="gestureIndicator" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-4 py-2 rounded-full text-sm opacity-0 transition-opacity duration-300 pointer-events-none">
-            Swipe left/right to navigate
+        <div id="loading-reader" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Loading book...</p>
         </div>
     </div>
 
-    <!-- Custom JavaScript -->
-    <script src="app.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

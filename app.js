@@ -692,7 +692,7 @@ async function renderPdfPages() {
         // Load PDF document
         pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
         totalPages = pdfDoc.numPages;
-        
+
         updateProgress(50, 100, `Processing ${totalPages} pages...`);
 
         // Clear existing content
@@ -708,8 +708,8 @@ async function renderPdfPages() {
         
         // Hide loading overlay after a brief delay
         setTimeout(() => {
-            $loadingOverlay.addClass('hidden');
-            $flipbookContainer.show();
+        $loadingOverlay.addClass('hidden');
+        $flipbookContainer.show();
             $pageCounter.removeClass('hidden');
             
             // Display first page
