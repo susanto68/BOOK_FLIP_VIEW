@@ -25,7 +25,8 @@ let isFullscreen = false;
 let isInitialLoad = true;
 let loadedPages = new Set(); // Track which pages are loaded
 let totalPages = 0;
-let initialLoadCount = 5; // Load only 5 pages initially
+let currentPageNumber = 1;
+let isLoadingInBackground = false;
 
 /**
  * Shows progress during PDF loading
@@ -146,10 +147,10 @@ function addTouchSupport() {
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 30) {
             if (diffX > 0) {
                 // Swipe left - next page
-                $flipbookContainer.turn('next');
+                goToNextPage();
             } else {
                 // Swipe right - previous page
-                $flipbookContainer.turn('previous');
+                goToPreviousPage();
             }
         }
         
@@ -254,11 +255,11 @@ function addMobileNavigationOverlay() {
     });
     
     $('#mobilePrevBtn').on('click', function() {
-        $flipbookContainer.turn('previous');
+        goToPreviousPage();
     });
     
     $('#mobileNextBtn').on('click', function() {
-        $flipbookContainer.turn('next');
+        goToNextPage();
     });
     
     // Update mobile page counter
@@ -270,7 +271,7 @@ function addMobileNavigationOverlay() {
  */
 function updateMobilePageCounter() {
     if (pdfDoc) {
-        $('#mobileCurrentPage').text($currentPage.text());
+        $('#mobileCurrentPage').text(currentPageNumber);
         $('#mobileTotalPages').text(pdfDoc.numPages);
     }
 }
@@ -287,7 +288,7 @@ async function renderPage(pageNumber) {
         const page = await pdfDoc.getPage(pageNumber);
         
         // Optimized scale for mobile performance
-        const scale = isMobile() ? 1.5 : 1.5; // Reduced from 2.0 for better performance
+        const scale = isMobile() ? 1.5 : 1.5;
         const viewport = page.getViewport({ scale });
 
         const canvas = document.createElement('canvas');
@@ -299,6 +300,7 @@ async function renderPage(pageNumber) {
         await page.render({ canvasContext: context, viewport }).promise;
         
         $(canvas).addClass('turn-page');
+        canvas.setAttribute('data-page', pageNumber);
         
         // Store canvas at correct index
         pageCanvases[pageNumber - 1] = canvas;
@@ -312,36 +314,105 @@ async function renderPage(pageNumber) {
 }
 
 /**
- * Load pages progressively
+ * Load pages in background continuously
  */
-async function loadPagesProgressively(startPage, endPage) {
-    const pagesToLoad = [];
-    for (let i = startPage; i <= endPage; i++) {
-        if (!loadedPages.has(i)) {
-            pagesToLoad.push(i);
-        }
-    }
+async function loadPagesInBackground() {
+    if (isLoadingInBackground) return;
     
-    if (pagesToLoad.length === 0) return;
+    isLoadingInBackground = true;
     
-    // Load pages in parallel for better performance
-    const loadPromises = pagesToLoad.map(async (pageNum) => {
-        const canvas = await renderPage(pageNum);
-        if (canvas) {
-            // Insert canvas at correct position
-            const existingCanvas = $flipbookContainer.find(`canvas[data-page="${pageNum}"]`);
-            if (existingCanvas.length === 0) {
-                canvas.setAttribute('data-page', pageNum);
-                $flipbookContainer.append(canvas);
+    try {
+        // Load next 3 pages in background
+        const pagesToLoad = [];
+        for (let i = currentPageNumber + 1; i <= Math.min(currentPageNumber + 3, totalPages); i++) {
+            if (!loadedPages.has(i)) {
+                pagesToLoad.push(i);
             }
         }
-    });
-    
-    await Promise.all(loadPromises);
+        
+        // Also load previous page if not loaded
+        if (currentPageNumber > 1 && !loadedPages.has(currentPageNumber - 1)) {
+            pagesToLoad.unshift(currentPageNumber - 1);
+        }
+        
+        if (pagesToLoad.length > 0) {
+            // Load pages in parallel
+            const loadPromises = pagesToLoad.map(async (pageNum) => {
+                await renderPage(pageNum);
+            });
+            
+            await Promise.all(loadPromises);
+        }
+    } catch (error) {
+        console.error('Error loading pages in background:', error);
+    } finally {
+        isLoadingInBackground = false;
+    }
 }
 
 /**
- * Loads and renders PDF pages with progressive loading
+ * Display a single page (Kindle-like experience)
+ */
+function displayPage(pageNumber) {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    
+    currentPageNumber = pageNumber;
+    
+    // Clear current display
+    $flipbookContainer.empty();
+    
+    // Get or load the page
+    if (loadedPages.has(pageNumber)) {
+        const canvas = pageCanvases[pageNumber - 1];
+        $flipbookContainer.append(canvas);
+    } else {
+        // Show loading indicator for current page
+        $flipbookContainer.html(`
+            <div class="page-loading">
+                <div class="spinner"></div>
+                <div>Loading page ${pageNumber}...</div>
+            </div>
+        `);
+        
+        // Load the page
+        renderPage(pageNumber).then(canvas => {
+            if (canvas) {
+                $flipbookContainer.empty().append(canvas);
+            }
+        });
+    }
+    
+    // Update page counters
+    $currentPage.text(pageNumber);
+    $totalPages.text(totalPages);
+    updateMobilePageCounter();
+    
+    // Start background loading
+    setTimeout(() => {
+        loadPagesInBackground();
+    }, 100);
+}
+
+/**
+ * Go to next page
+ */
+function goToNextPage() {
+    if (currentPageNumber < totalPages) {
+        displayPage(currentPageNumber + 1);
+    }
+}
+
+/**
+ * Go to previous page
+ */
+function goToPreviousPage() {
+    if (currentPageNumber > 1) {
+        displayPage(currentPageNumber - 1);
+    }
+}
+
+/**
+ * Loads and renders PDF pages with single-page display
  */
 async function renderPdfPages() {
     try {
@@ -353,21 +424,16 @@ async function renderPdfPages() {
         pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
         totalPages = pdfDoc.numPages;
         
-        updateProgress(20, 100, `Processing ${totalPages} pages...`);
+        updateProgress(50, 100, `Processing ${totalPages} pages...`);
         
         // Clear existing content
         $flipbookContainer.empty();
         pageCanvases = new Array(totalPages);
         loadedPages.clear();
         
-        // Load initial pages (first 5 pages)
-        updateProgress(30, 100, 'Loading initial pages...');
-        await loadPagesProgressively(1, Math.min(initialLoadCount, totalPages));
-        
-        updateProgress(60, 100, 'Initializing flipbook...');
-        
-        // Initialize flipbook with initial pages
-        initializeFlipbook();
+        // Load first page
+        updateProgress(80, 100, 'Loading first page...');
+        await renderPage(1);
         
         updateProgress(100, 100, 'Ready!');
         
@@ -376,6 +442,9 @@ async function renderPdfPages() {
             $loadingOverlay.addClass('hidden');
             $flipbookContainer.show();
             $pageCounter.removeClass('hidden');
+            
+            // Display first page
+            displayPage(1);
         }, 500);
 
     } catch (error) {
@@ -396,53 +465,9 @@ async function renderPdfPages() {
 }
 
 /**
- * Initialize Turn.js flipbook with enhanced features
+ * Initialize the single-page reader
  */
-function initializeFlipbook() {
-    // Calculate dimensions based on first loaded page
-    const firstLoadedPage = pageCanvases.find(canvas => canvas);
-    if (!firstLoadedPage) return;
-    
-    const pageWidth = firstLoadedPage.width;
-    const pageHeight = firstLoadedPage.height;
-
-    // Responsive sizing
-    const maxFlipbookWidth = Math.min(
-        $flipbookContainer.parent().width() * 0.95, 
-        pageWidth, 
-        window.innerWidth * 0.95
-    );
-    const calculatedFlipbookHeight = maxFlipbookWidth / (pageWidth / pageHeight);
-
-    // Initialize Turn.js with optimized settings
-    $flipbookContainer.turn({
-        width: maxFlipbookWidth,
-        height: calculatedFlipbookHeight,
-        autoCenter: true,
-        acceleration: true,
-        display: isMobile() ? 'single' : 'double',
-        duration: 400, // Faster animation for better responsiveness
-        gradients: true,
-        elevation: 30, // Reduced for better performance
-        when: {
-            turning: function(event, page, view) {
-                // Update page counter
-                $currentPage.text(page);
-                $totalPages.text(totalPages);
-                updateMobilePageCounter();
-                
-                // Preload nearby pages
-                const preloadRange = 3;
-                const startPage = Math.max(1, page - preloadRange);
-                const endPage = Math.min(totalPages, page + preloadRange);
-                loadPagesProgressively(startPage, endPage);
-            },
-            turned: function(event, page, view) {
-                // Page turned successfully
-            }
-        }
-    });
-
+function initializeReader() {
     // Mobile optimizations
     optimizeForMobile();
     
@@ -455,11 +480,11 @@ function initializeFlipbook() {
 
     // Navigation button handlers
     $prevPageButton.on('click', function() {
-        $flipbookContainer.turn('previous');
+        goToPreviousPage();
     });
 
     $nextPageButton.on('click', function() {
-        $flipbookContainer.turn('next');
+        goToNextPage();
     });
 
     // Fullscreen button handler
@@ -480,10 +505,10 @@ function initializeFlipbook() {
     // Enhanced keyboard navigation
     $(document).keydown(function(e) {
         if (e.keyCode === 37) { // Left arrow
-            $flipbookContainer.turn('previous');
+            goToPreviousPage();
             e.preventDefault();
         } else if (e.keyCode === 39) { // Right arrow
-            $flipbookContainer.turn('next');
+            goToNextPage();
             e.preventDefault();
         } else if (e.keyCode === 70) { // F key for fullscreen
             toggleFullscreen();
