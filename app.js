@@ -66,7 +66,8 @@ function optimizeForMobile() {
             'max-height': '100vh',
             'border-radius': '0',
             'z-index': '1000',
-            'background-color': '#f8fafc'
+            'background': 'linear-gradient(135deg, #f8fafc 0%, #e6f3ff 50%, #f0f8ff 100%)',
+            'overflow': 'hidden'
         });
         
         // Hide the main container header and navigation on mobile fullscreen
@@ -442,10 +443,11 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
         currentCanvasClone.style.cssText = `
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            object-fit: cover;
+            border-radius: 0;
+            box-shadow: none;
             background-color: white;
+            transform: scale(1.1);
         `;
         currentPage.appendChild(currentCanvasClone);
         currentPage.style.cssText = `
@@ -456,7 +458,7 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             height: 100%;
             transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
             transform: rotateY(0deg);
-            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             backface-visibility: hidden;
             transform-style: preserve-3d;
             z-index: 2;
@@ -469,10 +471,11 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
         nextCanvasClone.style.cssText = `
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            object-fit: cover;
+            border-radius: 0;
+            box-shadow: none;
             background-color: white;
+            transform: scale(1.1);
         `;
         nextPage.appendChild(nextCanvasClone);
         nextPage.style.cssText = `
@@ -483,7 +486,7 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             height: 100%;
             transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
             transform: rotateY(${direction === 'next' ? '-90deg' : '90deg'});
-            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             backface-visibility: hidden;
             transform-style: preserve-3d;
             z-index: 1;
@@ -495,6 +498,9 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
         
         // Clear container and add flip container
         $flipbookContainer.empty().append(flipContainer);
+        
+        // Add flipping class for background color
+        $flipbookContainer.addClass('flipping');
         
         // Force reflow to ensure initial state is applied
         flipContainer.offsetHeight;
@@ -510,8 +516,9 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
         setTimeout(() => {
             console.log('Animation complete, cleaning up');
             $flipbookContainer.empty().append(nextCanvas);
+            $flipbookContainer.removeClass('flipping');
             resolve();
-        }, 650); // Slightly longer than transition to ensure completion
+        }, 550); // Slightly longer than transition to ensure completion
     });
 }
 

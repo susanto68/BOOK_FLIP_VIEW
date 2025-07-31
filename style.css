@@ -284,6 +284,8 @@ body {
     perspective: 1200px;
     transform-style: preserve-3d;
     z-index: 1000;
+    background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 50%, #ADD8E6 100%);
+    border-radius: 8px;
 }
 
 .page-flip-current,
@@ -326,10 +328,15 @@ body {
     overflow: hidden;
     width: 100%;
     height: 100%;
-    background-color: #f8fafc;
+    background: linear-gradient(135deg, #f8fafc 0%, #e6f3ff 50%, #f0f8ff 100%);
     min-height: 80vh;
     position: relative;
     transform-style: preserve-3d;
+    transition: background 0.3s ease;
+}
+
+#flipbook.flipping {
+    background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 50%, #ADD8E6 100%);
 }
 
 #flipbook canvas {
@@ -506,7 +513,7 @@ body {
         box-shadow: none !important;
         transform: translateZ(0);
         will-change: transform;
-        background-color: #f8fafc;
+        background: linear-gradient(135deg, #f8fafc 0%, #e6f3ff 50%, #f0f8ff 100%);
         min-height: 100vh;
         position: fixed !important;
         top: 0 !important;
@@ -516,22 +523,40 @@ body {
         z-index: 1000 !important;
     }
     
+    #flipbook.flipping {
+        background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 50%, #ADD8E6 100%) !important;
+    }
+    
     /* Hide desktop navigation when in mobile fullscreen */
     .max-w-6xl .flex.justify-center.space-x-4 {
         display: none !important;
     }
     
-    /* Ensure full screen coverage */
+    /* Ensure full screen coverage - BIGGER for better reading */
     #flipbook canvas {
         width: 100vw !important;
         height: 100vh !important;
         max-width: 100vw !important;
         max-height: 100vh !important;
-        object-fit: contain;
+        object-fit: cover !important;
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
         border-radius: 0 !important;
         box-shadow: none !important;
+        transform: scale(1.1) !important;
+    }
+    
+    /* Page flip canvas should also be full screen */
+    .page-flip-current canvas,
+    .page-flip-next canvas {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
+        object-fit: cover !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        transform: scale(1.1) !important;
     }
     
     /* Optimize text size for mobile reading */
@@ -594,15 +619,29 @@ body {
         min-height: 60px;
     }
     
-    /* Optimize page flip animations for mobile */
+    /* Optimize page flip animations for mobile - STICKY and REALISTIC */
     .page-flip-current,
     .page-flip-next {
-        transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         will-change: transform;
+        transform-style: preserve-3d;
+        backface-visibility: hidden;
     }
     
     .page-flip-container {
-        perspective: 800px;
+        perspective: 1200px;
+        transform-style: preserve-3d;
+    }
+    
+    /* Enhanced sticky page flip effect */
+    .page-flip-current {
+        transform-origin: left center;
+        z-index: 2;
+    }
+    
+    .page-flip-next {
+        transform-origin: left center;
+        z-index: 1;
     }
 }
 
