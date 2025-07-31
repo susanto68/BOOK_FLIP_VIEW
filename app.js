@@ -10,6 +10,8 @@ const pdfUrl = 'Introduction_to_Python_Programming_-_WEB.pdf';
 const $flipbookContainer = $('#flipbook');
 const $prevPageButton = $('#prevPage');
 const $nextPageButton = $('#nextPage');
+const $leftNavBtn = $('#leftNavBtn');
+const $rightNavBtn = $('#rightNavBtn');
 const $loadingOverlay = $('#loadingOverlay');
 const $progressFill = $('#progressFill');
 const $loadingText = $('#loadingText');
@@ -22,11 +24,11 @@ const $gestureIndicator = $('#gestureIndicator');
 let pdfDoc = null;
 let pageCanvases = [];
 let isFullscreen = false;
-let isInitialLoad = true;
-let loadedPages = new Set(); // Track which pages are loaded
+let loadedPages = new Set();
 let totalPages = 0;
 let currentPageNumber = 1;
 let isLoadingInBackground = false;
+let isPageTransitioning = false;
 
 /**
  * Shows progress during PDF loading
@@ -130,7 +132,7 @@ function addTouchSupport() {
     });
     
     $flipbookContainer.on('touchend', function(e) {
-        if (!startX || !startY) return;
+        if (!startX || !startY || isPageTransitioning) return;
         
         const touchEndTime = Date.now();
         const touchDuration = touchEndTime - touchStartTime;
@@ -156,6 +158,38 @@ function addTouchSupport() {
         
         startX = 0;
         startY = 0;
+    });
+}
+
+/**
+ * Add click support for desktop side navigation
+ */
+function addSideNavigationSupport() {
+    // Add click handlers for side navigation buttons
+    $leftNavBtn.on('click', function() {
+        goToPreviousPage();
+    });
+    
+    $rightNavBtn.on('click', function() {
+        goToNextPage();
+    });
+    
+    // Add click handlers for clicking on the flipbook container sides
+    $flipbookContainer.on('click', function(e) {
+        if (isMobile()) return; // Don't use this on mobile
+        
+        const rect = this.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const containerWidth = rect.width;
+        
+        // If click is in the left third of the container, go to previous page
+        if (clickX < containerWidth / 3) {
+            goToPreviousPage();
+        }
+        // If click is in the right third of the container, go to next page
+        else if (clickX > (containerWidth * 2) / 3) {
+            goToNextPage();
+        }
     });
 }
 
@@ -351,34 +385,46 @@ async function loadPagesInBackground() {
 }
 
 /**
- * Display a single page (Kindle-like experience)
+ * Display a single page with smooth transition (Kindle-like experience)
  */
 function displayPage(pageNumber) {
-    if (pageNumber < 1 || pageNumber > totalPages) return;
+    if (pageNumber < 1 || pageNumber > totalPages || isPageTransitioning) return;
     
+    isPageTransitioning = true;
     currentPageNumber = pageNumber;
-    
-    // Clear current display
-    $flipbookContainer.empty();
     
     // Get or load the page
     if (loadedPages.has(pageNumber)) {
         const canvas = pageCanvases[pageNumber - 1];
-        $flipbookContainer.append(canvas);
+        
+        // Smooth transition effect
+        $flipbookContainer.fadeOut(200, function() {
+            $flipbookContainer.empty().append(canvas).fadeIn(200, function() {
+                isPageTransitioning = false;
+            });
+        });
     } else {
         // Show loading indicator for current page
-        $flipbookContainer.html(`
-            <div class="page-loading">
-                <div class="spinner"></div>
-                <div>Loading page ${pageNumber}...</div>
-            </div>
-        `);
-        
-        // Load the page
-        renderPage(pageNumber).then(canvas => {
-            if (canvas) {
-                $flipbookContainer.empty().append(canvas);
-            }
+        $flipbookContainer.fadeOut(200, function() {
+            $flipbookContainer.html(`
+                <div class="page-loading">
+                    <div class="spinner"></div>
+                    <div>Loading page ${pageNumber}...</div>
+                </div>
+            `).fadeIn(200);
+            
+            // Load the page
+            renderPage(pageNumber).then(canvas => {
+                if (canvas) {
+                    $flipbookContainer.fadeOut(200, function() {
+                        $flipbookContainer.empty().append(canvas).fadeIn(200, function() {
+                            isPageTransitioning = false;
+                        });
+                    });
+                } else {
+                    isPageTransitioning = false;
+                }
+            });
         });
     }
     
@@ -394,19 +440,19 @@ function displayPage(pageNumber) {
 }
 
 /**
- * Go to next page
+ * Go to next page with smooth transition
  */
 function goToNextPage() {
-    if (currentPageNumber < totalPages) {
+    if (currentPageNumber < totalPages && !isPageTransitioning) {
         displayPage(currentPageNumber + 1);
     }
 }
 
 /**
- * Go to previous page
+ * Go to previous page with smooth transition
  */
 function goToPreviousPage() {
-    if (currentPageNumber > 1) {
+    if (currentPageNumber > 1 && !isPageTransitioning) {
         displayPage(currentPageNumber - 1);
     }
 }
@@ -471,6 +517,9 @@ function initializeReader() {
     // Mobile optimizations
     optimizeForMobile();
     
+    // Add side navigation support
+    addSideNavigationSupport();
+    
     // Window resize handler
     $(window).on('resize', function() {
         setTimeout(() => {
@@ -526,7 +575,7 @@ $(document).ready(function() {
     renderPdfPages();
     
     // Add loading animation to buttons
-    $('.nav-btn').on('click', function() {
+    $('.nav-btn, .side-nav-btn').on('click', function() {
         $(this).addClass('scale-95');
         setTimeout(() => {
             $(this).removeClass('scale-95');
