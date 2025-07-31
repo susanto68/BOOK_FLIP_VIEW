@@ -314,13 +314,31 @@ body {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     background-color: white;
     transform: translateZ(0);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Enhanced page display - Larger for better reading experience */
+/* Realistic page corner curl effect */
+.page-flip-current::before,
+.page-flip-next::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        rgba(0,0,0,0.02) 0%, 
+        rgba(0,0,0,0.01) 2%, 
+        transparent 5%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Enhanced page display - TALLER with minimal spacing for better reading experience */
 #flipbook {
     display: flex;
     align-items: center;
@@ -329,10 +347,12 @@ body {
     width: 100%;
     height: 100%;
     background: linear-gradient(135deg, #f8fafc 0%, #e6f3ff 50%, #f0f8ff 100%);
-    min-height: 80vh;
+    min-height: 95vh;
+    max-height: 95vh;
     position: relative;
     transform-style: preserve-3d;
     transition: background 0.3s ease;
+    padding: 10px 0;
 }
 
 #flipbook.flipping {
@@ -340,44 +360,46 @@ body {
 }
 
 #flipbook canvas {
-    max-width: 95%;
-    max-height: 95%;
+    max-width: 98%;
+    max-height: 98%;
     width: auto;
     height: auto;
     object-fit: contain;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
     background-color: white;
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     transition: transform 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Side Navigation Buttons */
+/* Enhanced Side Navigation Buttons */
 .side-nav-btn {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 50px;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    width: 60px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(59, 130, 246, 0.2);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     z-index: 100;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(15px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     -webkit-tap-highlight-color: transparent;
 }
 
 .side-nav-btn:hover {
     background: rgba(255, 255, 255, 1);
-    transform: translateY(-50%) scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.4);
 }
 
 .side-nav-btn:active {
@@ -394,10 +416,11 @@ body {
 }
 
 .nav-arrow {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: bold;
-    color: #374151;
+    color: #3b82f6;
     line-height: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Page loading indicator for single-page display */
@@ -515,12 +538,14 @@ body {
         will-change: transform;
         background: linear-gradient(135deg, #f8fafc 0%, #e6f3ff 50%, #f0f8ff 100%);
         min-height: 100vh;
+        max-height: 100vh;
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         width: 100vw !important;
         height: 100vh !important;
         z-index: 1000 !important;
+        padding: 5px 0 !important;
     }
     
     #flipbook.flipping {
@@ -532,31 +557,33 @@ body {
         display: none !important;
     }
     
-    /* Ensure full screen coverage - BIGGER for better reading */
+    /* Ensure full screen coverage - TALLER with minimal spacing */
     #flipbook canvas {
         width: 100vw !important;
-        height: 100vh !important;
+        height: 98vh !important;
         max-width: 100vw !important;
-        max-height: 100vh !important;
-        object-fit: cover !important;
+        max-height: 98vh !important;
+        object-fit: contain !important;
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
         border-radius: 0 !important;
-        box-shadow: none !important;
-        transform: scale(1.1) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+        transform: scale(1.05) !important;
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
     }
     
-    /* Page flip canvas should also be full screen */
+    /* Page flip canvas should also be full screen with minimal spacing */
     .page-flip-current canvas,
     .page-flip-next canvas {
         width: 100vw !important;
-        height: 100vh !important;
+        height: 98vh !important;
         max-width: 100vw !important;
-        max-height: 100vh !important;
-        object-fit: cover !important;
+        max-height: 98vh !important;
+        object-fit: contain !important;
         border-radius: 0 !important;
-        box-shadow: none !important;
-        transform: scale(1.1) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+        transform: scale(1.05) !important;
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
     }
     
     /* Optimize text size for mobile reading */

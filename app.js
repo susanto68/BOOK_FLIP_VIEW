@@ -422,7 +422,7 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
     return new Promise((resolve) => {
         console.log(`Starting ${direction} page flip animation`);
         
-        // Create page flip container with 3D perspective
+        // Create page flip container with enhanced 3D perspective
         const flipContainer = document.createElement('div');
         flipContainer.className = 'page-flip-container';
         flipContainer.style.cssText = `
@@ -431,12 +431,14 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             left: 0;
             width: 100%;
             height: 100%;
-            perspective: 1200px;
+            perspective: 1500px;
             transform-style: preserve-3d;
             z-index: 1000;
+            background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 50%, #ADD8E6 100%);
+            border-radius: 8px;
         `;
         
-        // Create current page element (the page being turned)
+        // Create current page element (the page being turned) with realistic corner effect
         const currentPage = document.createElement('div');
         currentPage.className = 'page-flip-current';
         const currentCanvasClone = currentCanvas.cloneNode(true);
@@ -457,14 +459,35 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             width: 100%;
             height: 100%;
             transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
-            transform: rotateY(0deg);
-            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform: rotateY(0deg) translateZ(0);
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             backface-visibility: hidden;
             transform-style: preserve-3d;
             z-index: 2;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
         `;
         
-        // Create next page element (the page being revealed)
+        // Add realistic page corner curl effect
+        const pageCorner = document.createElement('div');
+        pageCorner.style.cssText = `
+            position: absolute;
+            top: 0;
+            ${direction === 'next' ? 'left: 0;' : 'right: 0;'}
+            width: 20px;
+            height: 100%;
+            background: linear-gradient(${direction === 'next' ? 'to right' : 'to left'}, 
+                rgba(0,0,0,0.1) 0%, 
+                rgba(0,0,0,0.05) 50%, 
+                transparent 100%);
+            transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
+            transform: rotateY(${direction === 'next' ? '0deg' : '0deg'});
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 3;
+            pointer-events: none;
+        `;
+        currentPage.appendChild(pageCorner);
+        
+        // Create next page element (the page being revealed) with realistic curl
         const nextPage = document.createElement('div');
         nextPage.className = 'page-flip-next';
         const nextCanvasClone = nextCanvas.cloneNode(true);
@@ -485,12 +508,33 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             width: 100%;
             height: 100%;
             transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
-            transform: rotateY(${direction === 'next' ? '-90deg' : '90deg'});
-            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform: rotateY(${direction === 'next' ? '-90deg' : '90deg'}) translateZ(0);
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             backface-visibility: hidden;
             transform-style: preserve-3d;
             z-index: 1;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
         `;
+        
+        // Add subtle curl effect to the next page
+        const nextPageCurl = document.createElement('div');
+        nextPageCurl.style.cssText = `
+            position: absolute;
+            top: 0;
+            ${direction === 'next' ? 'left: 0;' : 'right: 0;'}
+            width: 15px;
+            height: 100%;
+            background: linear-gradient(${direction === 'next' ? 'to right' : 'to left'}, 
+                rgba(0,0,0,0.08) 0%, 
+                rgba(0,0,0,0.03) 50%, 
+                transparent 100%);
+            transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
+            transform: rotateY(${direction === 'next' ? '-90deg' : '90deg'});
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 2;
+            pointer-events: none;
+        `;
+        nextPage.appendChild(nextPageCurl);
         
         // Add pages to flip container
         flipContainer.appendChild(currentPage);
@@ -505,11 +549,23 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
         // Force reflow to ensure initial state is applied
         flipContainer.offsetHeight;
         
-        // Start the flip animation
+        // Start the flip animation with realistic corner curl
         setTimeout(() => {
-            console.log(`Executing ${direction} flip animation`);
-            currentPage.style.transform = `rotateY(${direction === 'next' ? '90deg' : '-90deg'})`;
-            nextPage.style.transform = 'rotateY(0deg)';
+            console.log(`Executing ${direction} flip animation with corner curl`);
+            currentPage.style.transform = `rotateY(${direction === 'next' ? '90deg' : '-90deg'}) translateZ(0)`;
+            nextPage.style.transform = 'rotateY(0deg) translateZ(0)';
+            
+            // Animate the page corner curl effect
+            const pageCorner = currentPage.querySelector('div');
+            if (pageCorner) {
+                pageCorner.style.transform = `rotateY(${direction === 'next' ? '90deg' : '-90deg'})`;
+            }
+            
+            // Animate the next page curl effect
+            const nextPageCurl = nextPage.querySelector('div');
+            if (nextPageCurl) {
+                nextPageCurl.style.transform = 'rotateY(0deg)';
+            }
         }, 50);
         
         // Clean up after animation completes
@@ -518,7 +574,7 @@ function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
             $flipbookContainer.empty().append(nextCanvas);
             $flipbookContainer.removeClass('flipping');
             resolve();
-        }, 550); // Slightly longer than transition to ensure completion
+        }, 650); // Slightly longer than transition to ensure completion
     });
 }
 
