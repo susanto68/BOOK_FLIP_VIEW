@@ -29,6 +29,8 @@ let totalPages = 0;
 let currentPageNumber = 1;
 let isLoadingInBackground = false;
 let isPageTransitioning = false;
+let currentPageElement = null;
+let nextPageElement = null;
 
 /**
  * Shows progress during PDF loading
@@ -416,48 +418,122 @@ async function loadPagesInBackground() {
 }
 
 /**
- * Display a single page with smooth transition (Kindle-like experience)
+ * Create page flip animation (Kindle-like experience)
  */
-function displayPage(pageNumber) {
+function createPageFlipAnimation(currentCanvas, nextCanvas, direction) {
+    return new Promise((resolve) => {
+        const container = $flipbookContainer[0];
+        const containerRect = container.getBoundingClientRect();
+        
+        // Create page flip container
+        const flipContainer = document.createElement('div');
+        flipContainer.className = 'page-flip-container';
+        flipContainer.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            perspective: 1000px;
+            z-index: 1000;
+        `;
+        
+        // Create current page element
+        const currentPage = document.createElement('div');
+        currentPage.className = 'page-flip-current';
+        currentPage.appendChild(currentCanvas.cloneNode(true));
+        currentPage.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            backface-visibility: hidden;
+            z-index: 2;
+        `;
+        
+        // Create next page element
+        const nextPage = document.createElement('div');
+        nextPage.className = 'page-flip-next';
+        nextPage.appendChild(nextCanvas.cloneNode(true));
+        nextPage.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: ${direction === 'next' ? 'left' : 'right'} center;
+            transform: rotateY(${direction === 'next' ? '-90deg' : '90deg'});
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            backface-visibility: hidden;
+            z-index: 1;
+        `;
+        
+        // Add pages to flip container
+        flipContainer.appendChild(currentPage);
+        flipContainer.appendChild(nextPage);
+        
+        // Add flip container to main container
+        $flipbookContainer.append(flipContainer);
+        
+        // Start animation
+        setTimeout(() => {
+            currentPage.style.transform = `rotateY(${direction === 'next' ? '90deg' : '-90deg'})`;
+            nextPage.style.transform = 'rotateY(0deg)';
+        }, 50);
+        
+        // Clean up after animation
+        setTimeout(() => {
+            $flipbookContainer.empty().append(nextCanvas);
+            resolve();
+        }, 600);
+    });
+}
+
+/**
+ * Display a single page with Kindle-like flip animation
+ */
+async function displayPage(pageNumber) {
     if (pageNumber < 1 || pageNumber > totalPages || isPageTransitioning) return;
     
     console.log(`Displaying page ${pageNumber}`);
     isPageTransitioning = true;
+    const previousPage = currentPageNumber;
     currentPageNumber = pageNumber;
     
     // Get or load the page
     if (loadedPages.has(pageNumber)) {
-        const canvas = pageCanvases[pageNumber - 1];
+        const nextCanvas = pageCanvases[pageNumber - 1];
         
-        // Smooth transition effect
-        $flipbookContainer.fadeOut(200, function() {
-            $flipbookContainer.empty().append(canvas).fadeIn(200, function() {
-                isPageTransitioning = false;
-            });
-        });
+        if (currentPageElement) {
+            // Create flip animation
+            const direction = pageNumber > previousPage ? 'next' : 'prev';
+            await createPageFlipAnimation(currentPageElement, nextCanvas, direction);
+        } else {
+            // First page load - no animation
+            $flipbookContainer.empty().append(nextCanvas);
+        }
+        
+        currentPageElement = nextCanvas;
+        isPageTransitioning = false;
     } else {
         // Show loading indicator for current page
-        $flipbookContainer.fadeOut(200, function() {
-            $flipbookContainer.html(`
-                <div class="page-loading">
-                    <div class="spinner"></div>
-                    <div>Loading page ${pageNumber}...</div>
-                </div>
-            `).fadeIn(200);
-            
-            // Load the page
-            renderPage(pageNumber).then(canvas => {
-                if (canvas) {
-                    $flipbookContainer.fadeOut(200, function() {
-                        $flipbookContainer.empty().append(canvas).fadeIn(200, function() {
-                            isPageTransitioning = false;
-                        });
-                    });
-                } else {
-                    isPageTransitioning = false;
-                }
-            });
-        });
+        $flipbookContainer.html(`
+            <div class="page-loading">
+                <div class="spinner"></div>
+                <div>Loading page ${pageNumber}...</div>
+            </div>
+        `);
+        
+        // Load the page
+        const canvas = await renderPage(pageNumber);
+        if (canvas) {
+            $flipbookContainer.empty().append(canvas);
+            currentPageElement = canvas;
+        }
+        isPageTransitioning = false;
     }
     
     // Update page counters
